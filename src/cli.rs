@@ -12,6 +12,10 @@ pub struct Config {
     #[clap(short, long, parse(from_occurrences))]
     pub verbosity: usize,
 
+    /// Log JSON
+    #[clap(short, long, action)]
+    pub json: bool,
+
     /// Command to wrap
     #[clap(required = true)]
     pub cmd: String,
