@@ -1,4 +1,5 @@
 mod cli;
+mod error;
 mod events;
 mod logging;
 mod types;
