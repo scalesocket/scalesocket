@@ -1,5 +1,6 @@
 #![feature(async_closure)]
 mod cli;
+mod connection;
 mod error;
 mod events;
 mod logging;

@@ -10,6 +10,7 @@ pub type ConnID = usize;
 #[derive(Debug)]
 pub enum Event {
     Connect { room: RoomID, ws: Box<WebSocket> },
+    Disconnect { room: RoomID, conn: ConnID },
     ProcessExit { room: RoomID },
 }
 
