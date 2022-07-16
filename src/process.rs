@@ -20,7 +20,7 @@ pub async fn handle(mut process: Process) -> AppResult<()> {
     loop {
         tokio::select! {
             Some(v) = proc.rx_sock.next() => {
-                proc.tx_proc.write(&[v.as_bytes(), b"\n"].concat()).await?;
+                proc.tx_proc.write_all(&[v.as_bytes(), b"\n"].concat()).await?;
             }
             Some(v) = proc.rx_proc.next() => {
                 if let Ok(msg) = v {

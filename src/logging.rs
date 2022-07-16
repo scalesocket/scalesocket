@@ -5,7 +5,7 @@ pub fn setup_logging(config: &Config) {
     let level = match config.verbosity {
         0 => LevelFilter::INFO,
         1 => LevelFilter::DEBUG,
-        2 | _ => LevelFilter::TRACE,
+        _ => LevelFilter::TRACE,
     };
     let subscriber = Registry::default();
 

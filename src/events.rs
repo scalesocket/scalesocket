@@ -35,7 +35,6 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) {
                     let _ = tx.send(Event::Disconnect { room, conn });
                 }
             }));
-
         };
 
     let handle_spawn = |room: &RoomID, procs: &mut ProcessMap| {
@@ -45,7 +44,7 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) {
 
         tokio::spawn(process::handle(proc).then({
             // Successfully spawned, store handles in map
-            procs.insert(room.to_string(), (proc_tx_broadcast, proc_tx.clone()));
+            procs.insert(room.to_string(), (proc_tx_broadcast, proc_tx));
 
             let tx = tx.clone();
             let room = room.to_string();
