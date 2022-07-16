@@ -1,5 +1,6 @@
 use {
     tokio::sync::{broadcast, mpsc},
+    tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
     warp::ws::WebSocket,
 };
 
@@ -19,6 +20,7 @@ pub type EventRx = mpsc::UnboundedReceiver<Event>;
 // Channel for passing data to child process
 pub type ToProcessTx = mpsc::UnboundedSender<String>;
 pub type ToProcessRx = mpsc::UnboundedReceiver<String>;
+pub type ToProcessRxStream = UnboundedReceiverStream<String>;
 
 // Channel for passing data to from child process
 pub type FromProcessTx = broadcast::Sender<String>;

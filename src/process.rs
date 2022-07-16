@@ -1,12 +1,15 @@
 use crate::{
     cli::Config,
-    error::AppResult,
-    types::{FromProcessTx, ToProcessRx, ToProcessTx},
+    error::{AppError, AppResult},
+    types::{FromProcessTx, ToProcessRx, ToProcessRxStream, ToProcessTx},
     utils::{exit_code, run},
 };
 use {
+    futures::StreamExt,
+    tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     tokio::process::{Child, Command},
     tokio::sync::{broadcast, mpsc},
+    tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
 };
 
 pub async fn handle(mut process: Process) -> AppResult<()> {
@@ -16,6 +19,14 @@ pub async fn handle(mut process: Process) -> AppResult<()> {
     tracing::debug! { "listening childprocess" };
     loop {
         tokio::select! {
+            Some(v) = proc.rx_sock.next() => {
+                proc.tx_proc.write(&[v.as_bytes(), b"\n"].concat()).await?;
+            }
+            Some(v) = proc.rx_proc.next() => {
+                if let Ok(msg) = v {
+                    let _ = process.broadcast_tx.send(msg);
+                }
+            }
             status = child.wait() => {
                 tracing::error! { code=exit_code(status), "childprocess exited" };
                 break;
@@ -31,8 +42,24 @@ async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
         Source::Stdio(mut cmd) => {
             let mut child = cmd.spawn()?;
             tracing::debug!("spawned childprocess");
+            let stdin = child
+                .stdin
+                .take()
+                .ok_or(AppError::ProcessStdIOError("stdin"))?;
+            let stdout = child
+                .stdout
+                .take()
+                .ok_or(AppError::ProcessStdIOError("stdout"))?;
 
-            Ok(RunningProcess { child: Some(child) })
+            let rx_sock = UnboundedReceiverStream::new(process.rx.take().unwrap());
+            let rx_proc = Box::new(LinesStream::new(BufReader::new(stdout).lines()));
+
+            Ok(RunningProcess {
+                child: Some(child),
+                rx_sock,
+                rx_proc,
+                tx_proc: Box::new(stdin),
+            })
         }
     }
 }
@@ -52,7 +79,14 @@ pub enum Source {
 
 struct RunningProcess {
     child: Option<Child>,
+    rx_sock: ToProcessRxStream,
+    rx_proc: FromProcessRxAny,
+    tx_proc: FromProcessTxAny,
 }
+
+type FromProcessTxAny = Box<dyn tokio::io::AsyncWrite + Unpin + Send>;
+type FromProcessRxAny =
+    Box<dyn futures::Stream<Item = Result<String, std::io::Error>> + Unpin + Send>;
 
 impl Process {
     pub fn new(config: &Config) -> Self {
