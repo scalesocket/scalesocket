@@ -8,6 +8,9 @@ pub enum AppError {
     #[error("Failed to acquire process `{0}`")]
     ProcessStdIOError(&'static str),
 
+    #[error("Failed to stream {0}")]
+    StreamError(&'static str),
+
     #[error("Failed the impossible")]
     Infallible(#[from] Infallible),
 
