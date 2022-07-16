@@ -17,15 +17,30 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) {
     let handle_attach = |ws: Box<WebSocket>, room: RoomID, conns: &mut ConnectionMap| {
         let conn = new_conn_id();
 
-        // TODO spawn process
-
         conns.entry(room).or_default().insert(conn);
+    };
+
+    let handle_spawn = |room: &RoomID| {
+        let proc = Process::new(&config);
+
+        tokio::spawn(process::handle(proc).then({
+            let tx = tx.clone();
+            let room = room.to_string();
+            async move |_| {
+                tx.send(Event::ProcessExit { room })
+                    .expect("Failed to send ProcessExit event")
+            }
+        }));
     };
 
     while let Some(event) = rx.recv().await {
         match event {
             Event::Connect { ws, room } => {
+                handle_spawn(&room);
                 handle_attach(ws, room, &mut conns);
+            }
+            Event::ProcessExit { room } => {
+                // TODO
             }
         }
     }

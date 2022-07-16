@@ -1,7 +1,9 @@
+#![feature(async_closure)]
 mod cli;
 mod error;
 mod events;
 mod logging;
+mod process;
 mod types;
 mod utils;
 
