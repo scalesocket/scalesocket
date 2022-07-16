@@ -10,6 +10,7 @@ mod utils;
 use crate::{
     cli::Config,
     types::{Event, EventTx, RoomID},
+    logging::setup_logging,
 };
 
 use {clap::Parser, futures::FutureExt, tokio::sync::mpsc, tokio::try_join, warp::Filter};
@@ -17,6 +18,9 @@ use {clap::Parser, futures::FutureExt, tokio::sync::mpsc, tokio::try_join, warp:
 #[tokio::main]
 async fn main() {
     let config = Config::parse();
+
+    setup_logging(&config);
+
     let (tx, rx) = mpsc::unbounded_channel::<Event>();
 
     let handle_routes = warp::serve(routes::socket(tx.clone()).or(routes::health()))

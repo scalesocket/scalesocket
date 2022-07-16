@@ -11,10 +11,10 @@ pub fn setup_logging(config: &Config) {
 
     // Tracing can only disable layers during runtime using Option<Layer>
     let (json_log, plain_log) = if config.json {
-        let layer = layer().without_time().json();
+        let layer = layer().compact().without_time().json();
         (Some(layer), None)
     } else {
-        let layer = layer().pretty();
+        let layer = layer().compact().without_time().pretty();
         (None, Some(layer))
     };
 
