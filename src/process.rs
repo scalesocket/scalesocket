@@ -2,7 +2,7 @@ use crate::{
     cli::Config,
     error::AppResult,
     types::{FromProcessTx, ToProcessRx, ToProcessTx},
-    utils::run,
+    utils::{exit_code, run},
 };
 use {
     tokio::process::{Child, Command},
@@ -10,8 +10,31 @@ use {
 };
 
 pub async fn handle(mut process: Process) -> AppResult<()> {
-    // TODO spawn and handle process
+    let mut proc = spawn(&mut process).await?;
+    let mut child = proc.child.take().unwrap();
+
+    tracing::debug! { "listening childprocess" };
+    loop {
+        tokio::select! {
+            status = child.wait() => {
+                tracing::error! { code=exit_code(status), "childprocess exited" };
+                break;
+            },
+        }
+    }
+    tracing::debug! { "stopped listening childprocess" };
     Ok(())
+}
+
+async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
+    match process.source.take().unwrap() {
+        Source::Stdio(mut cmd) => {
+            let mut child = cmd.spawn()?;
+            tracing::debug!("spawned childprocess");
+
+            Ok(RunningProcess { child: Some(child) })
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -25,6 +48,10 @@ pub struct Process {
 #[derive(Debug)]
 pub enum Source {
     Stdio(Command),
+}
+
+struct RunningProcess {
+    child: Option<Child>,
 }
 
 impl Process {

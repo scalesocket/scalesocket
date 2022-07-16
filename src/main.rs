@@ -9,8 +9,8 @@ mod utils;
 
 use crate::{
     cli::Config,
-    types::{Event, EventTx, RoomID},
     logging::setup_logging,
+    types::{Event, EventTx, RoomID},
 };
 
 use {clap::Parser, futures::FutureExt, tokio::sync::mpsc, tokio::try_join, warp::Filter};

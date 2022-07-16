@@ -1,5 +1,6 @@
 use crate::types::ConnID;
 use {
+    std::process::ExitStatus,
     std::process::Stdio,
     std::sync::atomic::{AtomicUsize, Ordering},
     tokio::process::Command,
@@ -23,4 +24,8 @@ where
         .args(args)
         .kill_on_drop(true);
     cmd
+}
+
+pub fn exit_code<T>(status: Result<ExitStatus, T>) -> Option<i32> {
+    status.ok().and_then(|s| s.code()).or(None)
 }
