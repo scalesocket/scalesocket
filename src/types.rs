@@ -1,7 +1,7 @@
 use {tokio::sync::mpsc, warp::ws::WebSocket};
 
 pub type RoomID = String;
-pub type UserID = usize;
+pub type ConnID = usize;
 
 #[derive(Debug)]
 pub enum Event {

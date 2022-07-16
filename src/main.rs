@@ -1,6 +1,8 @@
 mod cli;
+mod events;
 mod logging;
 mod types;
+mod utils;
 
 use crate::{
     cli::Config,
@@ -22,13 +24,14 @@ async fn main() {
     let config = Config::parse();
     let (tx, rx) = mpsc::unbounded_channel::<Event>();
 
-    let handle_routes = warp::serve(socket_route(tx).or(health_route()))
+    let handle_routes = warp::serve(socket_route(tx.clone()).or(health_route()))
         .run(config.addr)
         .unit_error();
+    let handle_events = events::handle(rx, tx, config).unit_error();
 
     tracing::info! { "listening" };
 
-    let _ = try_join!(handle_routes);
+    let _ = try_join!(handle_events, handle_routes);
 }
 
 pub fn socket_route(
