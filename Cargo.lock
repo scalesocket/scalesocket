@@ -762,6 +762,7 @@ dependencies = [
  "clap",
  "futures",
  "serde_json",
+ "thiserror",
  "tokio",
  "tokio-process-stream",
  "tokio-stream",
