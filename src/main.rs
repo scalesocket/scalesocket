@@ -9,22 +9,14 @@ use crate::{
     types::{Event, EventTx, RoomID},
 };
 
-use {
-    clap::Parser,
-    futures::FutureExt,
-    serde_json::json,
-    tokio::sync::mpsc,
-    tokio::try_join,
-    warp::ws::Ws,
-    warp::{self, Filter, Rejection, Reply},
-};
+use {clap::Parser, futures::FutureExt, tokio::sync::mpsc, tokio::try_join, warp::Filter};
 
 #[tokio::main]
 async fn main() {
     let config = Config::parse();
     let (tx, rx) = mpsc::unbounded_channel::<Event>();
 
-    let handle_routes = warp::serve(socket_route(tx.clone()).or(health_route()))
+    let handle_routes = warp::serve(routes::socket(tx.clone()).or(routes::health()))
         .run(config.addr)
         .unit_error();
     let handle_events = events::handle(rx, tx, config).unit_error();
@@ -34,28 +26,37 @@ async fn main() {
     let _ = try_join!(handle_events, handle_routes);
 }
 
-pub fn socket_route(
-    tx: EventTx,
-) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    warp::path!(String)
-        .and(warp::path::end())
-        .and(warp::ws())
-        .map(move |room: RoomID, websocket: Ws| {
-            let tx = tx.clone();
-            websocket.on_upgrade(move |ws| {
-                let event = Event::Connect {
-                    ws: Box::new(ws),
-                    room,
-                };
-                tx.send(event).expect("Failed to send Connect event");
-                async { () }
-            })
-        })
-}
+mod routes {
+    use crate::types::{Event, EventTx, RoomID};
+    use {
+        serde_json::json,
+        warp::ws::Ws,
+        warp::{self, Filter, Rejection, Reply},
+    };
 
-pub fn health_route() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-    warp::path("health")
-        .and(warp::path::end())
-        .and(warp::get())
-        .map(|| warp::reply::json(&json!({"status" : "ok"})))
+    pub fn socket(
+        tx: EventTx,
+    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+        warp::path!(String)
+            .and(warp::path::end())
+            .and(warp::ws())
+            .map(move |room: RoomID, websocket: Ws| {
+                let tx = tx.clone();
+                websocket.on_upgrade(move |ws| {
+                    let event = Event::Connect {
+                        ws: Box::new(ws),
+                        room,
+                    };
+                    tx.send(event).expect("Failed to send Connect event");
+                    async { () }
+                })
+            })
+    }
+
+    pub fn health() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+        warp::path("health")
+            .and(warp::path::end())
+            .and(warp::get())
+            .map(|| warp::reply::json(&json!({"status" : "ok"})))
+    }
 }
