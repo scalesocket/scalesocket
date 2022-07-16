@@ -60,3 +60,20 @@ mod routes {
             .map(|| warp::reply::json(&json!({"status" : "ok"})))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use warp::http::StatusCode;
+    use warp::test::request;
+
+    use super::routes;
+
+    #[tokio::test]
+    async fn test_health() {
+        let api = routes::health();
+
+        let resp = request().method("GET").path("/health").reply(&api).await;
+
+        assert_eq!(resp.status(), StatusCode::OK);
+    }
+}
