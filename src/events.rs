@@ -67,6 +67,9 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) {
             Event::ProcessExit { room } => {
                 // TODO
             }
+            Event::Shutdown => {
+                break;
+            }
         }
     }
 }

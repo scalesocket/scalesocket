@@ -10,7 +10,7 @@ mod utils;
 
 use crate::{cli::Config, logging::setup_logging, types::Event};
 
-use {clap::Parser, futures::FutureExt, tokio::sync::mpsc, tokio::try_join, warp::Filter};
+use {clap::Parser, futures::FutureExt, tokio::signal, tokio::sync, tokio::try_join, warp::Filter};
 
 #[tokio::main]
 async fn main() {
@@ -18,16 +18,29 @@ async fn main() {
 
     setup_logging(&config);
 
-    let (tx, rx) = mpsc::unbounded_channel::<Event>();
+    let (tx, rx) = sync::mpsc::unbounded_channel::<Event>();
+    let (tx_routes_shutdown, rx_routes_shutdown) = sync::oneshot::channel();
+    let rx_routes_shutdown = rx_routes_shutdown.map(|_| ());
+    let tx_events_shutdown = tx.clone();
 
     let handle_routes = warp::serve(routes::socket(tx.clone()).or(routes::health()))
-        .run(config.addr)
+        .bind_with_graceful_shutdown(config.addr, rx_routes_shutdown)
+        .1
         .unit_error();
+
     let handle_events = events::handle(rx, tx, config).unit_error();
+
+    let handle_signal = async {
+        signal::ctrl_c().await.ok();
+        tracing::info! { "received SIGINT, shutting down" };
+        tx_routes_shutdown.send(()).ok();
+        tx_events_shutdown.send(Event::Shutdown).ok();
+    }
+    .unit_error();
 
     tracing::info! { "listening" };
 
-    let _ = try_join!(handle_events, handle_routes);
+    let _ = try_join!(handle_events, handle_routes, handle_signal);
 }
 
 mod routes {
