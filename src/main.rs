@@ -81,7 +81,7 @@ mod routes {
                         room,
                     };
                     tx.send(event).expect("Failed to send Connect event");
-                    async { () }
+                    async {}
                 })
             })
     }

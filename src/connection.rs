@@ -27,19 +27,20 @@ pub async fn handle(ws: WebSocket, rx_proc: FromProcessRx, tx_proc: ToProcessTx)
         .forward(tx_proc_sink);
 
     // exit in case receiver is dropped (process::handle exited)
-    let proc_rx_closed = tx_proc.closed().map(|_| Ok::<(), Infallible>(()));
+    let rx_proc_closed = tx_proc.closed().map(|_| Ok::<(), Infallible>(()));
 
     if let Err(e) = try_join!(
         proc_to_sock.map_err(|_| AppError::StreamError("process to socket")),
         sock_to_proc.map_err(|_| AppError::StreamError("socket to process")),
-        proc_rx_closed.map_err(AppError::from)
+        rx_proc_closed.map_err(AppError::from)
     ) {
         match e {
             AppError::StreamError(_) if tx_proc.is_closed() => {}
-            AppError::StreamError(e) => println!("Failed to stream {}", e),
+            AppError::StreamError(e) => tracing::error!("Failed to stream {}", e),
             _ => unreachable!(),
         }
     }
+    tracing::debug! { "connection handler done" };
 
     Ok(())
 }

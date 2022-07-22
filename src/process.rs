@@ -19,7 +19,7 @@ pub async fn handle(mut process: Process) -> AppResult<()> {
     let mut proc = spawn(&mut process).await?;
     let mut child = proc.child.take().unwrap();
 
-    tracing::debug! { "listening childprocess" };
+    tracing::debug! { "process handler listening to child" };
     loop {
         tokio::select! {
             Some(v) = proc.rx_sock.next() => {
@@ -40,7 +40,7 @@ pub async fn handle(mut process: Process) -> AppResult<()> {
             },
         }
     }
-    tracing::debug! { "stopped listening childprocess" };
+    tracing::debug! { "process handler done" };
     Ok(())
 }
 

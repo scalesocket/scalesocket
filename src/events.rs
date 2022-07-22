@@ -22,6 +22,8 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) {
     let handle_attach =
         |room: RoomID, ws: Box<WebSocket>, procs: &mut ProcessMap, conns: &mut ConnectionMap| {
             let conn = new_conn_id();
+            tracing::info! { id=conn, "client connected" };
+
             // Get process handles from map
             let (proc_tx_broadcast, proc_tx, _) =
                 procs.get(&room).expect("room not in process map");
@@ -29,10 +31,12 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) {
             let proc_rx = proc_tx_broadcast.subscribe();
 
             tokio::spawn(connection::handle(*ws, proc_rx, proc_tx).then({
+                // Successfully spawned, store connection handle in map
                 conns.entry(room.to_string()).or_default().insert(conn);
 
                 let tx = tx.clone();
                 async move |_| {
+                    tracing::debug! { id=conn, "client disconnecting" };
                     let _ = tx.send(Event::Disconnect { room, conn });
                 }
             }));
@@ -50,6 +54,7 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) {
 
             let tx = tx.clone();
             let room = room.to_string();
+            // Return future which is used after process::handle completes
             async move |_| {
                 tx.send(Event::ProcessExit { room })
                     .expect("Failed to send ProcessExit event")
@@ -83,7 +88,10 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) {
                 handle_disconnect(room, conn, &mut procs, &mut conns);
             }
             Event::ProcessExit { room } => {
-                // TODO
+                if procs.contains_key(&room) {
+                    tracing::error! { room=room, "process exited" };
+                    // TODO inform clients
+                }
             }
             Event::Shutdown => {
                 break;
