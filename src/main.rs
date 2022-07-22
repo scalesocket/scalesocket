@@ -10,7 +10,14 @@ mod utils;
 
 use crate::{cli::Config, logging::setup_logging, types::Event};
 
-use {clap::Parser, futures::FutureExt, tokio::signal, tokio::sync, tokio::try_join, warp::Filter};
+use {
+    clap::Parser,
+    futures::FutureExt,
+    tokio::signal::unix::{signal, SignalKind},
+    tokio::sync,
+    tokio::try_join,
+    warp::Filter,
+};
 
 #[tokio::main]
 async fn main() {
@@ -31,8 +38,13 @@ async fn main() {
     let handle_events = events::handle(rx, tx, config).unit_error();
 
     let handle_signal = async {
-        signal::ctrl_c().await.ok();
-        tracing::info! { "received SIGINT, shutting down" };
+        let mut interrupt = signal(SignalKind::interrupt()).expect("failed to create signal");
+        let mut terminate = signal(SignalKind::terminate()).expect("failed to create signal");
+        let signals = futures::future::select(interrupt.recv().boxed(), terminate.recv().boxed());
+
+        signals.await;
+
+        tracing::info! { "received signal, shutting down" };
         tx_routes_shutdown.send(()).ok();
         tx_events_shutdown.send(Event::Shutdown).ok();
     }
