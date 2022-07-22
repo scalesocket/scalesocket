@@ -85,6 +85,9 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) {
 
     while let Some(event) = rx.recv().await {
         match event {
+            Event::Connect { room, ws } if procs.contains_key(&room) => {
+                handle_attach(room, ws, &mut procs, &mut conns);
+            }
             Event::Connect { ws, room } => {
                 handle_spawn(&room, &mut procs);
                 handle_attach(room, ws, &mut procs, &mut conns);
