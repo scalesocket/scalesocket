@@ -122,3 +122,27 @@ fn disconnect(room: RoomID, conn: ConnID, state: &mut State) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use std::collections::{HashMap, HashSet};
+
+    use super::{disconnect, State};
+
+    #[tokio::test]
+    async fn test_disconnect() {
+        let mut state = State {
+            conns: HashMap::from([
+                ("room1".to_string(), HashSet::from([1])),
+                ("room2".to_string(), HashSet::from([2])),
+            ]),
+            procs: HashMap::new(),
+        };
+
+        disconnect("room1".to_string(), 1, &mut state);
+
+        assert!(state.conns.get("room1").unwrap().is_empty());
+        assert!(!state.conns.get("room2").unwrap().is_empty());
+    }
+}
