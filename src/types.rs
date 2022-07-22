@@ -1,5 +1,5 @@
 use {
-    tokio::sync::{broadcast, mpsc},
+    tokio::sync::{broadcast, mpsc, oneshot},
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
     warp::ws::WebSocket,
 };
@@ -23,6 +23,11 @@ pub type EventRx = mpsc::UnboundedReceiver<Event>;
 pub type ToProcessTx = mpsc::UnboundedSender<String>;
 pub type ToProcessRx = mpsc::UnboundedReceiver<String>;
 pub type ToProcessRxStream = UnboundedReceiverStream<String>;
+
+// Channel for triggering shutdown of child process
+pub type ShutdownTx = oneshot::Sender<()>;
+pub type ShutdownRx = oneshot::Receiver<()>;
+pub type ShutdownRxStream = futures::future::IntoStream<ShutdownRx>;
 
 // Channel for passing data to from child process
 pub type FromProcessTx = broadcast::Sender<String>;

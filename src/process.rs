@@ -1,14 +1,17 @@
 use crate::{
     cli::Config,
     error::{AppError, AppResult},
-    types::{FromProcessTx, ToProcessRx, ToProcessRxStream, ToProcessTx},
+    types::{
+        FromProcessTx, ShutdownRx, ShutdownRxStream, ShutdownTx, ToProcessRx, ToProcessRxStream,
+        ToProcessTx,
+    },
     utils::{exit_code, run},
 };
 use {
-    futures::StreamExt,
+    futures::{FutureExt, StreamExt},
     tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     tokio::process::{Child, Command},
-    tokio::sync::{broadcast, mpsc},
+    tokio::sync::{broadcast, mpsc, oneshot},
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
 };
 
@@ -26,6 +29,10 @@ pub async fn handle(mut process: Process) -> AppResult<()> {
                 if let Ok(msg) = v {
                     let _ = process.broadcast_tx.send(msg);
                 }
+            }
+            _ = proc.kill_rx.next() => {
+                // TODO propagate signal to child
+                break;
             }
             status = child.wait() => {
                 tracing::error! { code=exit_code(status), "childprocess exited" };
@@ -53,12 +60,14 @@ async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
 
             let rx_sock = UnboundedReceiverStream::new(process.rx.take().unwrap());
             let rx_proc = Box::new(LinesStream::new(BufReader::new(stdout).lines()));
+            let kill_rx = process.kill_rx.take().unwrap().into_stream();
 
             Ok(RunningProcess {
                 child: Some(child),
                 rx_sock,
                 rx_proc,
                 tx_proc: Box::new(stdin),
+                kill_rx,
             })
         }
     }
@@ -70,6 +79,8 @@ pub struct Process {
     pub tx: ToProcessTx,
     pub rx: Option<ToProcessRx>,
     pub broadcast_tx: FromProcessTx,
+    pub kill_rx: Option<ShutdownRx>,
+    pub kill_tx: Option<ShutdownTx>,
 }
 
 #[derive(Debug)]
@@ -82,6 +93,7 @@ struct RunningProcess {
     rx_sock: ToProcessRxStream,
     rx_proc: FromProcessRxAny,
     tx_proc: FromProcessTxAny,
+    kill_rx: ShutdownRxStream,
 }
 
 type FromProcessTxAny = Box<dyn tokio::io::AsyncWrite + Unpin + Send>;
@@ -92,6 +104,7 @@ impl Process {
     pub fn new(config: &Config) -> Self {
         let (tx, rx) = mpsc::unbounded_channel::<String>();
         let (broadcast_tx, _) = broadcast::channel::<String>(16);
+        let (kill_tx, kill_rx) = oneshot::channel();
 
         let cmd = run(&config.cmd, &config.args);
         let source = Some(Source::Stdio(cmd));
@@ -101,6 +114,8 @@ impl Process {
             tx,
             rx: Some(rx),
             broadcast_tx,
+            kill_tx: Some(kill_tx),
+            kill_rx: Some(kill_rx),
         }
     }
 }
