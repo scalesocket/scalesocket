@@ -1,4 +1,3 @@
-use std::convert::Infallible;
 use thiserror::Error;
 
 pub type AppResult<T> = ::std::result::Result<T, AppError>;
@@ -11,9 +10,9 @@ pub enum AppError {
     #[error("Failed to stream {0}")]
     StreamError(&'static str),
 
-    #[error("Failed the impossible")]
-    Infallible(#[from] Infallible),
+    #[error("Failed to use channel {0}")]
+    ChannelError(&'static str),
 
-    #[error("Generic IO error")]
-    Generic(#[from] std::io::Error),
+    #[error("Failed to process io")]
+    GenericError(#[from] std::io::Error),
 }

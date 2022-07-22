@@ -55,9 +55,12 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) {
             let tx = tx.clone();
             let room = room.to_string();
             // Return future which is used after process::handle completes
-            async move |_| {
-                tx.send(Event::ProcessExit { room })
-                    .expect("Failed to send ProcessExit event")
+            async move |result| {
+                tx.send(Event::ProcessExit {
+                    room,
+                    code: result.unwrap_or(None),
+                })
+                .expect("Failed to send ProcessExit event")
             }
         }));
     };
@@ -72,9 +75,11 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) {
             }
 
             if room_conns.is_empty() {
-                tracing::info! { "client was last in room, killing process" };
                 let kill_tx = procs.remove(&room).unwrap().2;
-                kill_tx.send(()).expect("Failed to send kill signal");
+                if let Ok(_) = kill_tx.send(()) {
+                    // Only log if kill was sent
+                    tracing::info! { room=room, "client was last in room, killing process" };
+                }
             }
         };
 
@@ -87,9 +92,9 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) {
             Event::Disconnect { room, conn } => {
                 handle_disconnect(room, conn, &mut procs, &mut conns);
             }
-            Event::ProcessExit { room } => {
+            Event::ProcessExit { room, code } => {
                 if procs.contains_key(&room) {
-                    tracing::error! { room=room, "process exited" };
+                    tracing::error! { room=room, code=code, "process exited" };
                     // TODO inform clients
                 }
             }

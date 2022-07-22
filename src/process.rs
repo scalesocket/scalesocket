@@ -15,12 +15,12 @@ use {
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
 };
 
-pub async fn handle(mut process: Process) -> AppResult<()> {
+pub async fn handle(mut process: Process) -> AppResult<Option<i32>> {
     let mut proc = spawn(&mut process).await?;
     let mut child = proc.child.take().unwrap();
 
     tracing::debug! { "process handler listening to child" };
-    loop {
+    let exit_code = loop {
         tokio::select! {
             Some(v) = proc.sock_rx.next() => {
                 proc.proc_tx.write_all(&[v.as_bytes(), b"\n"].concat()).await?;
@@ -32,16 +32,15 @@ pub async fn handle(mut process: Process) -> AppResult<()> {
             }
             _ = proc.kill_rx.next() => {
                 // TODO propagate signal to child
-                break;
+                break None;
             }
             status = child.wait() => {
-                tracing::error! { code=exit_code(status), "childprocess exited" };
-                break;
+                break exit_code(status);
             },
         }
-    }
+    };
     tracing::debug! { "process handler done" };
-    Ok(())
+    Ok(exit_code)
 }
 
 async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
