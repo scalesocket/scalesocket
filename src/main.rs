@@ -26,16 +26,16 @@ async fn main() {
     setup_logging(&config);
 
     let (tx, rx) = sync::mpsc::unbounded_channel::<Event>();
-    let (tx_routes_shutdown, rx_routes_shutdown) = sync::oneshot::channel();
-    let rx_routes_shutdown = rx_routes_shutdown.map(|_| ());
-    let tx_events_shutdown = tx.clone();
+    let (routes_shutdown_tx, routes_shutdown_rx) = sync::oneshot::channel();
+    let routes_shutdown_rx = routes_shutdown_rx.map(|_| ());
+    let events_shutdown_tx = tx.clone();
 
     let handle_routes = warp::serve(
         routes::socket(tx.clone())
             .or(routes::health())
             .or(routes::files(config.staticdir.clone())),
     )
-    .bind_with_graceful_shutdown(config.addr, rx_routes_shutdown)
+    .bind_with_graceful_shutdown(config.addr, routes_shutdown_rx)
     .1
     .unit_error();
 
@@ -49,8 +49,8 @@ async fn main() {
         signals.await;
 
         tracing::info! { "received signal, shutting down" };
-        tx_routes_shutdown.send(()).ok();
-        tx_events_shutdown.send(Event::Shutdown).ok();
+        routes_shutdown_tx.send(()).ok();
+        events_shutdown_tx.send(Event::Shutdown).ok();
     }
     .unit_error();
 

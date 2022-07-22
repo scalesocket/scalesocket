@@ -22,10 +22,10 @@ pub async fn handle(mut process: Process) -> AppResult<()> {
     tracing::debug! { "process handler listening to child" };
     loop {
         tokio::select! {
-            Some(v) = proc.rx_sock.next() => {
-                proc.tx_proc.write_all(&[v.as_bytes(), b"\n"].concat()).await?;
+            Some(v) = proc.sock_rx.next() => {
+                proc.proc_tx.write_all(&[v.as_bytes(), b"\n"].concat()).await?;
             }
-            Some(v) = proc.rx_proc.next() => {
+            Some(v) = proc.proc_rx.next() => {
                 if let Ok(msg) = v {
                     let _ = process.broadcast_tx.send(msg);
                 }
@@ -58,15 +58,15 @@ async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
                 .take()
                 .ok_or(AppError::ProcessStdIOError("stdout"))?;
 
-            let rx_sock = UnboundedReceiverStream::new(process.rx.take().unwrap());
-            let rx_proc = Box::new(LinesStream::new(BufReader::new(stdout).lines()));
+            let sock_rx = UnboundedReceiverStream::new(process.rx.take().unwrap());
+            let proc_rx = Box::new(LinesStream::new(BufReader::new(stdout).lines()));
             let kill_rx = process.kill_rx.take().unwrap().into_stream();
 
             Ok(RunningProcess {
                 child: Some(child),
-                rx_sock,
-                rx_proc,
-                tx_proc: Box::new(stdin),
+                sock_rx,
+                proc_rx,
+                proc_tx: Box::new(stdin),
                 kill_rx,
             })
         }
@@ -90,9 +90,9 @@ pub enum Source {
 
 struct RunningProcess {
     child: Option<Child>,
-    rx_sock: ToProcessRxStream,
-    rx_proc: FromProcessRxAny,
-    tx_proc: FromProcessTxAny,
+    sock_rx: ToProcessRxStream,
+    proc_rx: FromProcessRxAny,
+    proc_tx: FromProcessTxAny,
     kill_rx: ShutdownRxStream,
 }
 
