@@ -104,3 +104,56 @@ impl Process {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use clap::Parser;
+
+    use super::{handle, spawn, Process};
+    use crate::cli::Config;
+
+    fn create_process(args: &'static str) -> Process {
+        let config = Config::parse_from(args.split_whitespace());
+        Process::new(&config)
+    }
+
+    #[tokio::test]
+    async fn test_spawn_process() {
+        let mut process = create_process("scalesocket echo");
+
+        let mut proc = spawn(&mut process).await.unwrap();
+        let mut child = proc.child.take().unwrap();
+
+        assert_eq!(child.wait().await.ok().unwrap().code(), Some(0));
+    }
+
+    #[tokio::test]
+    async fn test_handle_process_output() {
+        let process = create_process("scalesocket echo -- foo");
+        let mut proc_rx = process.broadcast_tx.subscribe();
+
+        handle(process).await.ok();
+        let output = proc_rx.recv().await.ok();
+
+        assert_eq!(output, Some("foo".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_handle_process_input() {
+        let process = create_process("scalesocket head -- -n 1");
+        let mut proc_rx = process.broadcast_tx.subscribe();
+        let sock_tx = process.tx.clone();
+
+        let send = async {
+            sock_tx.send("foo\n".to_string()).ok();
+            Ok(())
+        };
+        let handle = handle(process);
+
+        tokio::try_join!(handle, send).ok();
+        let output = proc_rx.recv().await.ok();
+
+        assert_eq!(output, Some("foo".to_string()));
+    }
+}
