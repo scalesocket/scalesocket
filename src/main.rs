@@ -30,10 +30,14 @@ async fn main() {
     let rx_routes_shutdown = rx_routes_shutdown.map(|_| ());
     let tx_events_shutdown = tx.clone();
 
-    let handle_routes = warp::serve(routes::socket(tx.clone()).or(routes::health()))
-        .bind_with_graceful_shutdown(config.addr, rx_routes_shutdown)
-        .1
-        .unit_error();
+    let handle_routes = warp::serve(
+        routes::socket(tx.clone())
+            .or(routes::health())
+            .or(routes::files(config.staticdir.clone())),
+    )
+    .bind_with_graceful_shutdown(config.addr, rx_routes_shutdown)
+    .1
+    .unit_error();
 
     let handle_events = events::handle(rx, tx, config).unit_error();
 
@@ -56,16 +60,16 @@ async fn main() {
 }
 
 mod routes {
+
     use crate::types::{Event, EventTx, RoomID};
     use {
         serde_json::json,
+        std::path::PathBuf,
         warp::ws::Ws,
         warp::{self, Filter, Rejection, Reply},
     };
 
-    pub fn socket(
-        tx: EventTx,
-    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    pub fn socket(tx: EventTx) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
         warp::path!(String)
             .and(warp::path::end())
             .and(warp::ws())
@@ -87,6 +91,25 @@ mod routes {
             .and(warp::path::end())
             .and(warp::get())
             .map(|| warp::reply::json(&json!({"status" : "ok"})))
+    }
+
+    pub fn files(
+        path: Option<PathBuf>,
+    ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+        enable_if(path.is_some()).and(warp::fs::dir(path.unwrap_or_default()))
+    }
+
+    fn enable_if(condition: bool) -> impl Filter<Extract = (), Error = Rejection> + Copy {
+        warp::any()
+            .and_then(async move || {
+                if condition {
+                    Ok(())
+                } else {
+                    Err(warp::reject::not_found())
+                }
+            })
+            // deal with Ok(())
+            .untuple_one()
     }
 }
 

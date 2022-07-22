@@ -1,5 +1,4 @@
-use clap::Parser;
-use std::net::SocketAddr;
+use {clap::Parser, std::net::SocketAddr, std::path::PathBuf};
 
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about, long_about = None)]
@@ -11,6 +10,10 @@ pub struct Config {
     /// Increase level of verbosity
     #[clap(short, long, parse(from_occurrences))]
     pub verbosity: usize,
+
+    /// Serve static files from directory over HTTP
+    #[clap(long, value_parser, value_name = "DIR")]
+    pub staticdir: Option<PathBuf>,
 
     /// Log JSON
     #[clap(short, long, action)]
