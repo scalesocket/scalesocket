@@ -8,7 +8,7 @@ pub struct Config {
     pub addr: SocketAddr,
 
     /// Increase level of verbosity
-    #[clap(short, long, parse(from_occurrences))]
+    #[clap(short, parse(from_occurrences))]
     pub verbosity: usize,
 
     /// Serve static files from directory over HTTP
