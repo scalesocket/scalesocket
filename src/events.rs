@@ -74,6 +74,12 @@ fn attach(room: RoomID, ws: Box<WebSocket>, tx: &EventTx, state: &mut State) {
 
         if is_inserted {
             tracing::info! { id = conn, "client connected" };
+
+            // Inform child
+            if let Some(ref join_msg_template) = state.cfg.joinmsg {
+                let join_msg = join_msg_template.replace("%ID", &conn.to_string());
+                let _ = proc_tx.send(join_msg);
+            }
         }
     };
 
@@ -144,11 +150,19 @@ fn spawn(room: &RoomID, tx: &EventTx, state: &mut State) {
 fn disconnect(room: RoomID, conn: ConnID, state: &mut State) {
     let room_conns = state.conns.entry(room.clone()).or_default();
 
+    // Get process handles from map
+    let (_, proc_tx, _) = state.procs.get(&room).expect("room not in process map");
+
     let is_removed = room_conns.remove(&conn);
 
     if is_removed {
         tracing::info! { id = conn, "client disconnected" };
-        // TODO inform clients
+
+        // Inform child
+        if let Some(ref leave_msg_template) = state.cfg.leavemsg {
+            let leave_msg = leave_msg_template.replace("%ID", &conn.to_string());
+            let _ = proc_tx.send(leave_msg);
+        }
     }
 
     if room_conns.is_empty() {

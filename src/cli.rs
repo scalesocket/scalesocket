@@ -11,6 +11,14 @@ pub struct Config {
     #[clap(short, long, action)]
     pub json: bool,
 
+    /// Emit message to child on client connect (use %ID for id)
+    #[clap(long, value_name = "MSG")]
+    pub joinmsg: Option<String>,
+
+    /// Emit message to child on client disconnect (use %ID for id)
+    #[clap(long, value_name = "MSG")]
+    pub leavemsg: Option<String>,
+
     /// Increase level of verbosity
     #[clap(short, parse(from_occurrences))]
     pub verbosity: usize,
