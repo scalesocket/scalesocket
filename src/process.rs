@@ -9,9 +9,12 @@ use crate::{
 };
 use {
     futures::{FutureExt, StreamExt},
+    std::net::SocketAddr,
     tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    tokio::net::TcpStream,
     tokio::process::{Child, Command},
     tokio::sync::{broadcast, mpsc, oneshot},
+    tokio::time::{sleep, Duration},
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
 };
 
@@ -44,6 +47,9 @@ pub async fn handle(mut process: Process) -> AppResult<Option<i32>> {
 }
 
 async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
+    let kill_rx = process.kill_rx.take().unwrap().into_stream();
+    let sock_rx = UnboundedReceiverStream::new(process.rx.take().unwrap());
+
     match process.source.take().unwrap() {
         Source::Stdio(mut cmd) => {
             let mut child = cmd.spawn()?;
@@ -57,15 +63,30 @@ async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
                 .take()
                 .ok_or(AppError::ProcessStdIOError("stdout"))?;
 
-            let sock_rx = UnboundedReceiverStream::new(process.rx.take().unwrap());
             let proc_rx = Box::new(LinesStream::new(BufReader::new(stdout).lines()));
-            let kill_rx = process.kill_rx.take().unwrap().into_stream();
 
             Ok(RunningProcess {
                 child: Some(child),
                 sock_rx,
                 proc_rx,
                 proc_tx: Box::new(stdin),
+                kill_rx,
+            })
+        }
+        Source::Tcp(mut cmd, addr) => {
+            let child = cmd.spawn()?;
+            sleep(Duration::from_secs(1)).await;
+            let stream = TcpStream::connect(addr).await.expect("connection failed");
+            tracing::debug!("connected to childprocess");
+
+            let (rx, tx) = stream.into_split();
+            let proc_rx = LinesStream::new(BufReader::new(rx).lines());
+
+            Ok(RunningProcess {
+                child: Some(child),
+                sock_rx,
+                proc_tx: Box::new(tx),
+                proc_rx: Box::new(proc_rx),
                 kill_rx,
             })
         }
@@ -85,6 +106,7 @@ pub struct Process {
 #[derive(Debug)]
 pub enum Source {
     Stdio(Command),
+    Tcp(Command, SocketAddr),
 }
 
 struct RunningProcess {
@@ -106,7 +128,10 @@ impl Process {
         let (kill_tx, kill_rx) = oneshot::channel();
 
         let cmd = run(&config.cmd, &config.args);
-        let source = Some(Source::Stdio(cmd));
+        let source = match &config.tcp {
+            true => Some(Source::Tcp(cmd, "127.0.0.1:9001".parse().unwrap())),
+            false => Some(Source::Stdio(cmd)),
+        };
 
         Self {
             source,

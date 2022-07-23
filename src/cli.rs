@@ -7,6 +7,10 @@ pub struct Config {
     #[clap(long, default_value = "0.0.0.0:9000")]
     pub addr: SocketAddr,
 
+    /// Log JSON
+    #[clap(short, long, action)]
+    pub json: bool,
+
     /// Increase level of verbosity
     #[clap(short, parse(from_occurrences))]
     pub verbosity: usize,
@@ -15,9 +19,9 @@ pub struct Config {
     #[clap(long, value_parser, value_name = "DIR")]
     pub staticdir: Option<PathBuf>,
 
-    /// Log JSON
-    #[clap(short, long, action)]
-    pub json: bool,
+    /// Connect to child using TCP instead of stdio
+    #[clap(long, action)]
+    pub tcp: bool,
 
     /// Command to wrap
     #[clap(required = true)]
