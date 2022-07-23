@@ -115,10 +115,15 @@ mod routes {
 
 #[cfg(test)]
 mod tests {
+    use clap::Parser;
+    use futures::{FutureExt, StreamExt};
+    use tokio::time::{sleep, Duration};
     use warp::test::request;
     use warp::{http::StatusCode, test::WsClient};
 
     use super::routes;
+    use crate::cli::Config;
+    use crate::events;
     use crate::types::{Event, EventTx};
 
     struct Client {
@@ -141,6 +146,18 @@ mod tests {
             self.inner.send_text(text).await;
             self
         }
+
+        pub async fn recv(&mut self) -> Result<String, ()> {
+            let res = self.inner.recv().await;
+            match res {
+                Ok(msg) => Ok(msg.to_str().unwrap_or_default().to_owned()),
+                Err(_) => Err(()),
+            }
+        }
+    }
+
+    fn create_config(args: &'static str) -> Config {
+        Config::parse_from(args.split_whitespace())
     }
 
     #[tokio::test]
@@ -164,5 +181,32 @@ mod tests {
         };
 
         assert_eq!(Some("example".to_string()), room);
+    }
+
+    #[tokio::test]
+    async fn socket_e2e_echo() {
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
+        let config = create_config("scalesocket echo -- hello");
+        let mut received_messages: Vec<String> = Vec::new();
+        let mut client = Client::connect("/example", tx.clone()).await;
+
+        let inspect = async {
+            // TODO figure out easier way to inspect stream
+            let mut stream = Box::pin(client.recv().into_stream());
+            while let Some(msg) = stream.next().await {
+                received_messages.push(msg.unwrap_or_default());
+            }
+            Ok(())
+        };
+        let shutdown = async {
+            sleep(Duration::from_millis(250)).await;
+            tx.send(Event::Shutdown).ok();
+            Ok(())
+        };
+        let handle = events::handle(rx, tx.clone(), config);
+
+        let _ = tokio::try_join!(handle, shutdown, inspect);
+
+        assert_eq!(received_messages, vec!["hello"]);
     }
 }

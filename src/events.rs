@@ -1,6 +1,7 @@
 use crate::{
     cli::Config,
     connection,
+    error::AppResult,
     process::{self, Process},
     types::{ConnID, Event, EventRx, EventTx, FromProcessTx, RoomID, ShutdownTx, ToProcessTx},
     utils::new_conn_id,
@@ -21,7 +22,7 @@ struct State {
     pub procs: ProcessMap,
 }
 
-pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) {
+pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<()> {
     let mut state = State {
         conns: HashMap::new(),
         procs: HashMap::new(),
@@ -50,6 +51,7 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) {
             }
         }
     }
+    Ok(())
 }
 
 #[instrument(name = "connection", skip(ws, tx, state))]
