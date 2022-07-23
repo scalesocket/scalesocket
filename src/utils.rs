@@ -1,4 +1,4 @@
-use crate::types::ConnID;
+use crate::types::{ConnID, PortID};
 use {
     std::process::ExitStatus,
     std::process::Stdio,
@@ -13,7 +13,7 @@ pub fn new_conn_id() -> ConnID {
     NEXT_CONNECTION_ID.fetch_add(1, Ordering::Relaxed)
 }
 
-pub fn run<I, S>(program: &str, args: I) -> Command
+pub fn run<I, S>(program: &str, args: I, port: Option<PortID>) -> Command
 where
     I: IntoIterator<Item = S>,
     S: AsRef<std::ffi::OsStr>,
@@ -22,7 +22,12 @@ where
     cmd.stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .args(args)
-        .kill_on_drop(true);
+        .kill_on_drop(true)
+        .env_clear();
+
+    if let Some(port) = port {
+        cmd.env("PORT", port.to_string());
+    }
     cmd
 }
 

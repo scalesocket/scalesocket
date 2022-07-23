@@ -119,6 +119,7 @@ fn spawn(room: &RoomID, tx: &EventTx, state: &mut State) {
     if let Some(port) = port {
         tracing::debug!("reserved port {}", port);
     }
+
     let mut proc = Process::new(&state.cfg, port);
     let proc_tx_broadcast = proc.broadcast_tx.clone();
     let proc_tx = proc.tx.clone();

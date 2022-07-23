@@ -139,7 +139,7 @@ impl Process {
         let (broadcast_tx, _) = broadcast::channel::<String>(16);
         let (kill_tx, kill_rx) = oneshot::channel();
 
-        let cmd = run(&config.cmd, &config.args);
+        let cmd = run(&config.cmd, &config.args, port);
         let source = match &config.tcp {
             true => {
                 let addr = SocketAddrV4::new("127.0.0.1".parse().unwrap(), port.unwrap()).into();

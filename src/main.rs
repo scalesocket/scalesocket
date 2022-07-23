@@ -28,6 +28,8 @@ async fn main() {
     let (routes_shutdown_tx, routes_shutdown_rx) = sync::oneshot::channel();
     let events_shutdown_tx = tx.clone();
 
+    tracing::info! { "listening at {}", config.addr };
+
     let handle_events = events::handle(rx, tx.clone(), config.clone()).unit_error();
     let handle_routes = routes::handle(tx, config, routes_shutdown_rx).unit_error();
     let handle_signal = async {
@@ -42,8 +44,6 @@ async fn main() {
         events_shutdown_tx.send(Event::Shutdown).ok();
     }
     .unit_error();
-
-    tracing::info! { "listening" };
 
     let _ = try_join!(handle_events, handle_routes, handle_signal);
 }
