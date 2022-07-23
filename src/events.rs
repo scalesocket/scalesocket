@@ -20,12 +20,14 @@ type ProcessMap = HashMap<RoomID, (FromProcessTx, ToProcessTx, ShutdownTx)>;
 struct State {
     pub conns: ConnectionMap,
     pub procs: ProcessMap,
+    pub cfg: Config,
 }
 
 pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<()> {
     let mut state = State {
         conns: HashMap::new(),
         procs: HashMap::new(),
+        cfg: config,
     };
 
     while let Some(event) = rx.recv().await {
@@ -34,7 +36,7 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<(
                 attach(room, ws, &tx, &mut state);
             }
             Event::Connect { room, ws } => {
-                spawn(&room, &config, &tx, &mut state);
+                spawn(&room, &tx, &mut state);
                 attach(room, ws, &tx, &mut state);
             }
             Event::Disconnect { room, conn } => {
@@ -86,9 +88,9 @@ fn attach(room: RoomID, ws: Box<WebSocket>, tx: &EventTx, state: &mut State) {
     );
 }
 
-#[instrument(name = "process", skip(config, tx, state))]
-fn spawn(room: &RoomID, config: &Config, tx: &EventTx, state: &mut State) {
-    let mut proc = Process::new(config);
+#[instrument(name = "process", skip(tx, state))]
+fn spawn(room: &RoomID, tx: &EventTx, state: &mut State) {
+    let mut proc = Process::new(&state.cfg);
     let proc_tx_broadcast = proc.broadcast_tx.clone();
     let proc_tx = proc.tx.clone();
     let kill_tx = proc.kill_tx.take().unwrap();
