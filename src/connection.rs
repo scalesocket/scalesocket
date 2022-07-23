@@ -5,7 +5,6 @@ use crate::{
 use {
     futures::{FutureExt, StreamExt, TryFutureExt},
     sender_sink::wrappers::UnboundedSenderSink,
-    std::convert::Infallible,
     tokio::try_join,
     tokio_stream::wrappers::BroadcastStream,
     warp::ws::{Message, WebSocket},
@@ -15,6 +14,7 @@ pub async fn handle(ws: WebSocket, proc_rx: FromProcessRx, proc_tx: ToProcessTx)
     let proc_rx = BroadcastStream::new(proc_rx);
     let proc_tx_sink = UnboundedSenderSink::from(proc_tx.clone());
     let (sock_tx, sock_rx) = ws.split();
+    tracing::debug! { "connection handler listening to client" };
 
     // forward process to socket
     let proc_to_sock = proc_rx

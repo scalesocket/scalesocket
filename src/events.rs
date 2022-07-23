@@ -9,6 +9,7 @@ use crate::{
 use {
     futures::FutureExt,
     std::collections::{HashMap, HashSet},
+    tracing::{instrument, Instrument},
     warp::ws::WebSocket,
 };
 
@@ -51,6 +52,7 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) {
     }
 }
 
+#[instrument(name = "connection", skip(ws, tx, state))]
 fn attach(room: RoomID, ws: Box<WebSocket>, tx: &EventTx, state: &mut State) {
     let conn = new_conn_id();
     tracing::info! { id=conn, "client connected" };
@@ -60,50 +62,60 @@ fn attach(room: RoomID, ws: Box<WebSocket>, tx: &EventTx, state: &mut State) {
     let proc_tx = proc_tx.clone();
     let proc_rx = proc_tx_broadcast.subscribe();
 
-    tokio::spawn(connection::handle(*ws, proc_rx, proc_tx).then({
-        // Successfully spawned, store connection handle in map
-        state
-            .conns
-            .entry(room.to_string())
-            .or_default()
-            .insert(conn);
+    tokio::spawn(
+        connection::handle(*ws, proc_rx, proc_tx)
+            .then({
+                // Successfully spawned, store connection handle in map
+                state
+                    .conns
+                    .entry(room.to_string())
+                    .or_default()
+                    .insert(conn);
 
-        let tx = tx.clone();
+                let tx = tx.clone();
 
-        // Return callback for connection::handle
-        async move |_| {
-            tracing::debug! { id=conn, "client disconnecting" };
-            let _ = tx.send(Event::Disconnect { room, conn });
-        }
-    }));
+                // Return callback for connection::handle
+                async move |_| {
+                    tracing::debug! { id=conn, "client disconnecting" };
+                    let _ = tx.send(Event::Disconnect { room, conn });
+                }
+            })
+            .in_current_span(),
+    );
 }
 
+#[instrument(name = "process", skip(config, tx, state))]
 fn spawn(room: &RoomID, config: &Config, tx: &EventTx, state: &mut State) {
     let mut proc = Process::new(config);
     let proc_tx_broadcast = proc.broadcast_tx.clone();
     let proc_tx = proc.tx.clone();
     let kill_tx = proc.kill_tx.take().unwrap();
 
-    tokio::spawn(process::handle(proc).then({
-        // Successfully spawned, store handles in map
-        state
-            .procs
-            .insert(room.to_string(), (proc_tx_broadcast, proc_tx, kill_tx));
+    tokio::spawn(
+        process::handle(proc)
+            .then({
+                // Successfully spawned, store handles in map
+                state
+                    .procs
+                    .insert(room.to_string(), (proc_tx_broadcast, proc_tx, kill_tx));
 
-        let tx = tx.clone();
-        let room = room.to_string();
+                let tx = tx.clone();
+                let room = room.to_string();
 
-        // Return callback for process::handle
-        async move |result| {
-            tx.send(Event::ProcessExit {
-                room,
-                code: result.unwrap_or(None),
+                // Return callback for process::handle
+                async move |result| {
+                    tx.send(Event::ProcessExit {
+                        room,
+                        code: result.unwrap_or(None),
+                    })
+                    .expect("Failed to send ProcessExit event")
+                }
             })
-            .expect("Failed to send ProcessExit event")
-        }
-    }));
+            .in_current_span(),
+    );
 }
 
+#[instrument(name = "connection", skip(conn, state))]
 fn disconnect(room: RoomID, conn: ConnID, state: &mut State) {
     let room_conns = state.conns.entry(room.clone()).or_default();
     let proc = state.procs.get(&room);
@@ -117,7 +129,7 @@ fn disconnect(room: RoomID, conn: ConnID, state: &mut State) {
         if let Some((_, _, kill_tx)) = state.procs.remove(&room) {
             if let Ok(_) = kill_tx.send(()) {
                 // Only log if kill was sent
-                tracing::info! { room=room, "client was last in room, killing process" };
+                tracing::info! { "all clients disconnected, killing process" };
             }
         }
     }

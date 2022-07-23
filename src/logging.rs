@@ -16,6 +16,7 @@ pub fn setup_logging(config: &Config) {
             .without_time()
             .with_target(false)
             .json()
+            .with_span_list(false)
             .flatten_event(true);
         (Some(layer), None)
     } else {

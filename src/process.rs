@@ -54,6 +54,7 @@ async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
         Source::Stdio(mut cmd) => {
             let mut child = cmd.spawn()?;
             tracing::debug!("spawned childprocess");
+
             let stdin = child
                 .stdin
                 .take()
