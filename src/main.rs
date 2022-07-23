@@ -115,17 +115,54 @@ mod routes {
 
 #[cfg(test)]
 mod tests {
-    use warp::http::StatusCode;
     use warp::test::request;
+    use warp::{http::StatusCode, test::WsClient};
 
     use super::routes;
+    use crate::types::{Event, EventTx};
+
+    struct Client {
+        inner: WsClient,
+    }
+
+    impl Client {
+        pub async fn connect(path: &'static str, tx: EventTx) -> Self {
+            let api = routes::socket(tx);
+            let client = warp::test::ws()
+                .path(path)
+                .handshake(api)
+                .await
+                .expect("handshake");
+
+            Self { inner: client }
+        }
+
+        pub async fn send(&mut self, text: &'static str) -> &Self {
+            self.inner.send_text(text).await;
+            self
+        }
+    }
 
     #[tokio::test]
-    async fn test_health() {
+    async fn health_returns_ok() {
         let api = routes::health();
 
         let resp = request().method("GET").path("/health").reply(&api).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn socket_connect_event() {
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
+        Client::connect("/example", tx).await.send("hello").await;
+
+        let received_event = rx.recv().await.unwrap();
+        let room = match received_event {
+            Event::Connect { room, .. } => Some(room),
+            _ => None,
+        };
+
+        assert_eq!(Some("example".to_string()), room);
     }
 }
