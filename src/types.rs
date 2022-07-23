@@ -1,6 +1,6 @@
 use {
     tokio::sync::{broadcast, mpsc, oneshot},
-    tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
+    tokio_stream::wrappers::UnboundedReceiverStream,
     warp::ws::WebSocket,
 };
 
