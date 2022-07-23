@@ -16,7 +16,6 @@ use {
     tokio::signal::unix::{signal, SignalKind},
     tokio::sync,
     tokio::try_join,
-    warp::Filter,
 };
 
 #[tokio::main]
@@ -27,20 +26,10 @@ async fn main() {
 
     let (tx, rx) = sync::mpsc::unbounded_channel::<Event>();
     let (routes_shutdown_tx, routes_shutdown_rx) = sync::oneshot::channel();
-    let routes_shutdown_rx = routes_shutdown_rx.map(|_| ());
     let events_shutdown_tx = tx.clone();
 
-    let handle_routes = warp::serve(
-        routes::socket(tx.clone())
-            .or(routes::health())
-            .or(routes::files(config.staticdir.clone())),
-    )
-    .bind_with_graceful_shutdown(config.addr, routes_shutdown_rx)
-    .1
-    .unit_error();
-
-    let handle_events = events::handle(rx, tx, config).unit_error();
-
+    let handle_events = events::handle(rx, tx.clone(), config.clone()).unit_error();
+    let handle_routes = routes::handle(tx, config, routes_shutdown_rx).unit_error();
     let handle_signal = async {
         let mut interrupt = signal(SignalKind::interrupt()).expect("failed to create signal");
         let mut terminate = signal(SignalKind::terminate()).expect("failed to create signal");
@@ -61,13 +50,30 @@ async fn main() {
 
 mod routes {
 
-    use crate::types::{Event, EventTx, RoomID};
+    use futures::FutureExt;
+
+    use crate::{
+        cli::Config,
+        types::{Event, EventTx, RoomID, ShutdownRx},
+    };
     use {
         serde_json::json,
         std::path::PathBuf,
         warp::ws::Ws,
         warp::{self, Filter, Rejection, Reply},
     };
+
+    pub fn handle(
+        tx: EventTx,
+        config: Config,
+        shutdown_rx: ShutdownRx,
+    ) -> impl futures::Future<Output = ()> {
+        let shutdown_rx = shutdown_rx.map(|_| ());
+
+        warp::serve(socket(tx).or(health()).or(files(config.staticdir.clone())))
+            .bind_with_graceful_shutdown(config.addr, shutdown_rx)
+            .1
+    }
 
     pub fn socket(tx: EventTx) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
         warp::path!(String)
