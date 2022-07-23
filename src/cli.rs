@@ -1,4 +1,4 @@
-use {clap::Parser, std::net::SocketAddr, std::path::PathBuf};
+use {clap::Parser, std::net::SocketAddr, std::ops::Range, std::path::PathBuf};
 
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about, long_about = None)]
@@ -19,9 +19,9 @@ pub struct Config {
     #[clap(long, value_name = "MSG")]
     pub leavemsg: Option<String>,
 
-    /// Increase level of verbosity
-    #[clap(short, parse(from_occurrences))]
-    pub verbosity: usize,
+    /// Port range for TCP
+    #[clap(long, parse(try_from_str = parse_ports), value_name = "START:END", default_value = "9001:9999")]
+    pub tcpports: Range<u16>,
 
     /// Serve static files from directory over HTTP
     #[clap(long, value_parser, value_name = "DIR")]
@@ -31,6 +31,10 @@ pub struct Config {
     #[clap(long, action)]
     pub tcp: bool,
 
+    /// Increase level of verbosity
+    #[clap(short, parse(from_occurrences))]
+    pub verbosity: usize,
+
     /// Command to wrap
     #[clap(required = true)]
     pub cmd: String,
@@ -38,4 +42,14 @@ pub struct Config {
     /// Arguments to command
     #[clap(last = true)]
     pub args: Vec<String>,
+}
+
+fn parse_ports(arg: &str) -> Result<Range<u16>, &'static str> {
+    if let Some((start, end)) = arg.split_once(":") {
+        let range: (Option<u16>, Option<u16>) = (start.parse().ok(), end.parse().ok());
+        if let (Some(start), Some(end)) = range {
+            return Ok(start..end);
+        }
+    };
+    return Err("Could not parse port range");
 }

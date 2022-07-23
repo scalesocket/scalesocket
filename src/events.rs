@@ -3,12 +3,15 @@ use crate::{
     connection,
     error::AppResult,
     process::{self, Process},
-    types::{ConnID, Event, EventRx, EventTx, FromProcessTx, RoomID, ShutdownTx, ToProcessTx},
+    types::{
+        ConnID, Event, EventRx, EventTx, FromProcessTx, PortID, RoomID, ShutdownTx, ToProcessTx,
+    },
     utils::new_conn_id,
 };
 
 use {
     futures::FutureExt,
+    id_pool::IdPool as PortPool,
     std::collections::{HashMap, HashSet},
     tracing::{instrument, Instrument},
     warp::ws::WebSocket,
@@ -20,6 +23,7 @@ type ProcessMap = HashMap<RoomID, (FromProcessTx, ToProcessTx, ShutdownTx)>;
 struct State {
     pub conns: ConnectionMap,
     pub procs: ProcessMap,
+    pub ports: PortPool,
     pub cfg: Config,
 }
 
@@ -27,6 +31,7 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<(
     let mut state = State {
         conns: HashMap::new(),
         procs: HashMap::new(),
+        ports: PortPool::new_ranged(config.tcpports.clone()),
         cfg: config,
     };
 
@@ -37,16 +42,14 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<(
             }
             Event::Connect { room, ws } => {
                 spawn(&room, &tx, &mut state);
+                // TODO handle spawn error if spawn.is_ok() else tracing::error
                 attach(room, ws, &tx, &mut state);
             }
             Event::Disconnect { room, conn } => {
                 disconnect(room, conn, &mut state);
             }
-            Event::ProcessExit { room, code } => {
-                if state.procs.contains_key(&room) {
-                    tracing::error! { room=room, code=code, "process exited" };
-                    // TODO inform clients
-                }
+            Event::ProcessExit { room, code, port } => {
+                exit(room, code, port, &mut state);
             }
             Event::Shutdown => {
                 break;
@@ -109,6 +112,14 @@ fn attach(room: RoomID, ws: Box<WebSocket>, tx: &EventTx, state: &mut State) {
 #[instrument(name = "process", skip(tx, state))]
 fn spawn(room: &RoomID, tx: &EventTx, state: &mut State) {
     let mut proc = Process::new(&state.cfg);
+    let port = match state.cfg.tcp {
+        true => state.ports.request_id(),
+        false => None,
+    };
+
+    if let Some(port) = port {
+        tracing::debug!("reserved port {}", port);
+    }
     let proc_tx_broadcast = proc.broadcast_tx.clone();
     let proc_tx = proc.tx.clone();
     let kill_tx = proc.kill_tx.take().unwrap();
@@ -129,6 +140,7 @@ fn spawn(room: &RoomID, tx: &EventTx, state: &mut State) {
             tx.send(Event::ProcessExit {
                 room,
                 code: result.unwrap_or(None),
+                port,
             })
             .expect("Failed to send ProcessExit event")
         }
@@ -172,6 +184,19 @@ fn disconnect(room: RoomID, conn: ConnID, state: &mut State) {
                 tracing::info! { "all clients disconnected, killing process" };
             }
         }
+    }
+}
+
+#[instrument(name = "process", skip(code, port, state))]
+fn exit(room: RoomID, code: Option<i32>, port: Option<PortID>, state: &mut State) {
+    if let Some(port) = port {
+        let _ = state.ports.return_id(port);
+        tracing::debug!("released port {}", port);
+    }
+
+    if state.procs.contains_key(&room) {
+        tracing::error! { room, code, "process exited" };
+        // TODO inform clients
     }
 }
 

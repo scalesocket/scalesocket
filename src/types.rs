@@ -6,12 +6,23 @@ use {
 
 pub type RoomID = String;
 pub type ConnID = usize;
+pub type PortID = u16;
 
 #[derive(Debug)]
 pub enum Event {
-    Connect { room: RoomID, ws: Box<WebSocket> },
-    Disconnect { room: RoomID, conn: ConnID },
-    ProcessExit { room: RoomID, code: Option<i32> },
+    Connect {
+        room: RoomID,
+        ws: Box<WebSocket>,
+    },
+    Disconnect {
+        room: RoomID,
+        conn: ConnID,
+    },
+    ProcessExit {
+        room: RoomID,
+        code: Option<i32>,
+        port: Option<PortID>,
+    },
     Shutdown,
 }
 
