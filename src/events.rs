@@ -59,30 +59,42 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<(
 #[instrument(name = "connection", skip(ws, tx, state))]
 fn attach(room: RoomID, ws: Box<WebSocket>, tx: &EventTx, state: &mut State) {
     let conn = new_conn_id();
-    tracing::info! { id=conn, "client connected" };
 
     // Get process handles from map
     let (proc_tx_broadcast, proc_tx, _) = state.procs.get(&room).expect("room not in process map");
-    let proc_tx = proc_tx.clone();
     let proc_rx = proc_tx_broadcast.subscribe();
 
+    let mut on_connect = || {
+        // Successfully spawned, store connection handle in map
+        let is_inserted = state
+            .conns
+            .entry(room.to_string())
+            .or_default()
+            .insert(conn);
+
+        if is_inserted {
+            tracing::info! { id = conn, "client connected" };
+        }
+    };
+
+    let on_disconnect = || {
+        let tx = tx.clone();
+        let room = room.clone();
+
+        // Return callback for connection::handle
+        async move |_| {
+            tracing::debug! { id=conn, "client disconnecting" };
+            let _ = tx.send(Event::Disconnect { room, conn });
+        }
+    };
+
     tokio::spawn(
-        connection::handle(*ws, proc_rx, proc_tx)
+        connection::handle(*ws, proc_rx, proc_tx.clone())
             .then({
-                // Successfully spawned, store connection handle in map
-                state
-                    .conns
-                    .entry(room.to_string())
-                    .or_default()
-                    .insert(conn);
-
-                let tx = tx.clone();
-
-                // Return callback for connection::handle
-                async move |_| {
-                    tracing::debug! { id=conn, "client disconnecting" };
-                    let _ = tx.send(Event::Disconnect { room, conn });
-                }
+                // NOTE: we invoke on_connect closure immediately...
+                on_connect();
+                // NOTE: ...and then invoke a closure returning the async callback closure
+                on_disconnect()
             })
             .in_current_span(),
     );
@@ -95,25 +107,34 @@ fn spawn(room: &RoomID, tx: &EventTx, state: &mut State) {
     let proc_tx = proc.tx.clone();
     let kill_tx = proc.kill_tx.take().unwrap();
 
+    let on_spawn = || {
+        // Successfully spawned, store handles in map
+        state
+            .procs
+            .insert(room.to_string(), (proc_tx_broadcast, proc_tx, kill_tx));
+    };
+
+    let on_kill = || {
+        let tx = tx.clone();
+        let room = room.to_string();
+
+        // Return callback for process::handle
+        async move |result: AppResult<Option<i32>>| {
+            tx.send(Event::ProcessExit {
+                room,
+                code: result.unwrap_or(None),
+            })
+            .expect("Failed to send ProcessExit event")
+        }
+    };
+
     tokio::spawn(
         process::handle(proc)
             .then({
-                // Successfully spawned, store handles in map
-                state
-                    .procs
-                    .insert(room.to_string(), (proc_tx_broadcast, proc_tx, kill_tx));
-
-                let tx = tx.clone();
-                let room = room.to_string();
-
-                // Return callback for process::handle
-                async move |result| {
-                    tx.send(Event::ProcessExit {
-                        room,
-                        code: result.unwrap_or(None),
-                    })
-                    .expect("Failed to send ProcessExit event")
-                }
+                // NOTE: we invoke on_spawn closure immediately...
+                on_spawn();
+                // NOTE: ...and then invoke a closure returning the async callback closure
+                on_kill()
             })
             .in_current_span(),
     );
@@ -122,16 +143,17 @@ fn spawn(room: &RoomID, tx: &EventTx, state: &mut State) {
 #[instrument(name = "connection", skip(conn, state))]
 fn disconnect(room: RoomID, conn: ConnID, state: &mut State) {
     let room_conns = state.conns.entry(room.clone()).or_default();
-    let proc = state.procs.get(&room);
 
-    if room_conns.remove(&conn) {
+    let is_removed = room_conns.remove(&conn);
+
+    if is_removed {
         tracing::info! { id = conn, "client disconnected" };
         // TODO inform clients
     }
 
     if room_conns.is_empty() {
         if let Some((_, _, kill_tx)) = state.procs.remove(&room) {
-            if let Ok(_) = kill_tx.send(()) {
+            if kill_tx.send(()).is_ok() {
                 // Only log if kill was sent
                 tracing::info! { "all clients disconnected, killing process" };
             }
@@ -142,9 +164,23 @@ fn disconnect(room: RoomID, conn: ConnID, state: &mut State) {
 #[cfg(test)]
 mod tests {
 
+    use crate::cli::Config;
+    use clap::Parser;
     use std::collections::{HashMap, HashSet};
+    use tokio::sync::{broadcast, mpsc, oneshot};
 
-    use super::{disconnect, State};
+    use super::{disconnect, FromProcessTx, ShutdownTx, State, ToProcessTx};
+
+    fn create_config(args: &'static str) -> Config {
+        Config::parse_from(args.split_whitespace())
+    }
+
+    fn create_process_handle() -> (FromProcessTx, ToProcessTx, ShutdownTx) {
+        let (tx, _) = mpsc::unbounded_channel::<String>();
+        let (broadcast_tx, _) = broadcast::channel::<String>(16);
+        let (kill_tx, _) = oneshot::channel();
+        (broadcast_tx, tx, kill_tx)
+    }
 
     #[tokio::test]
     async fn test_disconnect() {
@@ -153,7 +189,8 @@ mod tests {
                 ("room1".to_string(), HashSet::from([1])),
                 ("room2".to_string(), HashSet::from([2])),
             ]),
-            procs: HashMap::new(),
+            procs: HashMap::from([("room1".to_string(), create_process_handle())]),
+            cfg: create_config("scalesocket cat"),
         };
 
         disconnect("room1".to_string(), 1, &mut state);
