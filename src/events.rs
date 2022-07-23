@@ -10,7 +10,7 @@ use crate::{
 };
 
 use {
-    futures::FutureExt,
+    futures::{FutureExt, TryFutureExt},
     id_pool::IdPool as PortPool,
     std::collections::{HashMap, HashSet},
     tracing::{instrument, Instrument},
@@ -111,7 +111,6 @@ fn attach(room: RoomID, ws: Box<WebSocket>, tx: &EventTx, state: &mut State) {
 
 #[instrument(name = "process", skip(tx, state))]
 fn spawn(room: &RoomID, tx: &EventTx, state: &mut State) {
-    let mut proc = Process::new(&state.cfg);
     let port = match state.cfg.tcp {
         true => state.ports.request_id(),
         false => None,
@@ -120,6 +119,7 @@ fn spawn(room: &RoomID, tx: &EventTx, state: &mut State) {
     if let Some(port) = port {
         tracing::debug!("reserved port {}", port);
     }
+    let mut proc = Process::new(&state.cfg, port);
     let proc_tx_broadcast = proc.broadcast_tx.clone();
     let proc_tx = proc.tx.clone();
     let kill_tx = proc.kill_tx.take().unwrap();
@@ -136,24 +136,27 @@ fn spawn(room: &RoomID, tx: &EventTx, state: &mut State) {
         let room = room.to_string();
 
         // Return callback for process::handle
-        async move |result: AppResult<Option<i32>>| {
-            tx.send(Event::ProcessExit {
-                room,
-                code: result.unwrap_or(None),
-                port,
-            })
-            .expect("Failed to send ProcessExit event")
+        move |code: Option<i32>| {
+            tx.send(Event::ProcessExit { room, code, port })
+                .expect("Failed to send ProcessExit event");
+            Ok(())
         }
     };
 
     tokio::spawn(
         process::handle(proc)
-            .then({
-                // NOTE: we invoke on_spawn closure immediately...
-                on_spawn();
-                // NOTE: ...and then invoke a closure returning the async callback closure
-                on_kill()
-            })
+            .map_ok_or_else(
+                move |e| {
+                    tracing::error!("{}", e);
+                    Err(e)
+                },
+                {
+                    // NOTE: we invoke on_spawn closure immediately...
+                    on_spawn();
+                    // NOTE: ...and then invoke a closure returning the callback closure
+                    on_kill()
+                },
+            )
             .in_current_span(),
     );
 }
@@ -208,7 +211,7 @@ mod tests {
     use std::collections::{HashMap, HashSet};
     use tokio::sync::{broadcast, mpsc, oneshot};
 
-    use super::{disconnect, FromProcessTx, ShutdownTx, State, ToProcessTx};
+    use super::{disconnect, FromProcessTx, ShutdownTx, State, ToProcessTx, PortPool};
 
     fn create_config(args: &'static str) -> Config {
         Config::parse_from(args.split_whitespace())
@@ -230,6 +233,7 @@ mod tests {
             ]),
             procs: HashMap::from([("room1".to_string(), create_process_handle())]),
             cfg: create_config("scalesocket cat"),
+            ports: PortPool::new()
         };
 
         disconnect("room1".to_string(), 1, &mut state);

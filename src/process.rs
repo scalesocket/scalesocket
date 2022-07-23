@@ -2,14 +2,15 @@ use crate::{
     cli::Config,
     error::{AppError, AppResult},
     types::{
-        FromProcessTx, ShutdownRx, ShutdownRxStream, ShutdownTx, ToProcessRx, ToProcessRxStream,
-        ToProcessTx,
+        FromProcessTx, PortID, ShutdownRx, ShutdownRxStream, ShutdownTx, ToProcessRx,
+        ToProcessRxStream, ToProcessTx,
     },
     utils::{exit_code, run},
 };
 use {
     futures::{FutureExt, StreamExt},
     std::net::SocketAddr,
+    std::net::SocketAddrV4,
     tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     tokio::net::TcpStream,
     tokio::process::{Child, Command},
@@ -77,8 +78,18 @@ async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
         Source::Tcp(mut cmd, addr) => {
             let child = cmd.spawn()?;
             sleep(Duration::from_secs(1)).await;
-            let stream = TcpStream::connect(addr).await.expect("connection failed");
-            tracing::debug!("connected to childprocess");
+
+            let stream = match TcpStream::connect(addr).await {
+                Ok(s) => s,
+                Err(e) => {
+                    return Err(AppError::NetworkError(
+                        addr.to_string(),
+                        e.kind().to_string(),
+                    ))
+                }
+            };
+
+            tracing::debug!("connected to childprocess at {}", addr);
 
             let (rx, tx) = stream.into_split();
             let proc_rx = LinesStream::new(BufReader::new(rx).lines());
@@ -123,14 +134,17 @@ type FromProcessRxAny =
     Box<dyn futures::Stream<Item = Result<String, std::io::Error>> + Unpin + Send>;
 
 impl Process {
-    pub fn new(config: &Config) -> Self {
+    pub fn new(config: &Config, port: Option<PortID>) -> Self {
         let (tx, rx) = mpsc::unbounded_channel::<String>();
         let (broadcast_tx, _) = broadcast::channel::<String>(16);
         let (kill_tx, kill_rx) = oneshot::channel();
 
         let cmd = run(&config.cmd, &config.args);
         let source = match &config.tcp {
-            true => Some(Source::Tcp(cmd, "127.0.0.1:9001".parse().unwrap())),
+            true => {
+                let addr = SocketAddrV4::new("127.0.0.1".parse().unwrap(), port.unwrap()).into();
+                Some(Source::Tcp(cmd, addr))
+            }
             false => Some(Source::Stdio(cmd)),
         };
 
@@ -155,7 +169,7 @@ mod tests {
 
     fn create_process(args: &'static str) -> Process {
         let config = Config::parse_from(args.split_whitespace());
-        Process::new(&config)
+        Process::new(&config, None)
     }
 
     #[tokio::test]
