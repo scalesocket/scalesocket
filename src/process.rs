@@ -8,7 +8,10 @@ use crate::{
     utils::{exit_code, run},
 };
 use {
+    bytes::Bytes,
+    futures::TryStreamExt,
     futures::{FutureExt, StreamExt},
+    std::io::Result as IOResult,
     std::net::SocketAddr,
     std::net::SocketAddrV4,
     tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -17,6 +20,8 @@ use {
     tokio::sync::{broadcast, mpsc, oneshot},
     tokio::time::{sleep, Duration},
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
+    tokio_util::codec::{BytesCodec, FramedRead},
+    warp::ws::Message,
 };
 
 pub async fn handle(mut process: Process) -> AppResult<Option<i32>> {
@@ -27,11 +32,20 @@ pub async fn handle(mut process: Process) -> AppResult<Option<i32>> {
     let exit_code = loop {
         tokio::select! {
             Some(v) = proc.sock_rx.next() => {
-                proc.proc_tx.write_all(&[v.as_bytes(), b"\n"].concat()).await?;
+                if process.is_binary {
+                    proc.proc_tx.write_all(&v).await?;
+                } else {
+                    proc.proc_tx.write_all(&[&v[..], b"\n"].concat()).await?;
+                };
             }
             Some(v) = proc.proc_rx.next() => {
                 if let Ok(msg) = v {
-                    let _ = process.broadcast_tx.send(msg);
+                    if process.is_binary {
+                        let _ = process.cast_tx.send(Message::binary(msg));
+                    } else {
+                        let msg = std::str::from_utf8(&msg).unwrap_or_default();
+                        let _ = process.cast_tx.send(Message::text(msg));
+                    };
                 }
             }
             _ = proc.kill_rx.next() => {
@@ -65,7 +79,20 @@ async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
                 .take()
                 .ok_or(AppError::ProcessStdIOError("stdout"))?;
 
-            let proc_rx = Box::new(LinesStream::new(BufReader::new(stdout).lines()));
+            let proc_rx: Box<dyn futures::Stream<Item = IOResult<Bytes>> + Unpin + Send> =
+                match process.is_binary {
+                    true => {
+                        let buffer = BufReader::new(stdout);
+                        let stream = FramedRead::new(buffer, BytesCodec::new());
+                        // let stream = ReaderStream::new(buffer);
+                        Box::new(stream.map_ok(Bytes::from))
+                    }
+                    false => {
+                        let buffer = BufReader::new(stdout);
+                        let stream = LinesStream::new(buffer.lines());
+                        Box::new(stream.map_ok(Bytes::from))
+                    }
+                };
 
             Ok(RunningProcess {
                 child: Some(child),
@@ -92,13 +119,25 @@ async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
             tracing::debug!("connected to childprocess at {}", addr);
 
             let (rx, tx) = stream.into_split();
-            let proc_rx = LinesStream::new(BufReader::new(rx).lines());
+            let proc_rx: Box<dyn futures::Stream<Item = IOResult<Bytes>> + Unpin + Send> =
+                match process.is_binary {
+                    true => {
+                        let buffer = BufReader::new(rx);
+                        let stream = FramedRead::new(buffer, BytesCodec::new());
+                        Box::new(stream.map_ok(Bytes::from))
+                    }
+                    false => {
+                        let buffer = BufReader::new(rx);
+                        let stream = LinesStream::new(buffer.lines());
+                        Box::new(stream.map_ok(Bytes::from))
+                    }
+                };
 
             Ok(RunningProcess {
                 child: Some(child),
                 sock_rx,
                 proc_tx: Box::new(tx),
-                proc_rx: Box::new(proc_rx),
+                proc_rx,
                 kill_rx,
             })
         }
@@ -108,9 +147,10 @@ async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
 #[derive(Debug)]
 pub struct Process {
     source: Option<Source>,
+    is_binary: bool,
     pub tx: ToProcessTx,
     pub rx: Option<ToProcessRx>,
-    pub broadcast_tx: FromProcessTx,
+    pub cast_tx: FromProcessTx,
     pub kill_rx: Option<ShutdownRx>,
     pub kill_tx: Option<ShutdownTx>,
 }
@@ -131,12 +171,12 @@ struct RunningProcess {
 
 type FromProcessTxAny = Box<dyn tokio::io::AsyncWrite + Unpin + Send>;
 type FromProcessRxAny =
-    Box<dyn futures::Stream<Item = Result<String, std::io::Error>> + Unpin + Send>;
+    Box<dyn futures::Stream<Item = Result<Bytes, std::io::Error>> + Unpin + Send>;
 
 impl Process {
     pub fn new(config: &Config, port: Option<PortID>) -> Self {
-        let (tx, rx) = mpsc::unbounded_channel::<String>();
-        let (broadcast_tx, _) = broadcast::channel::<String>(16);
+        let (tx, rx) = mpsc::unbounded_channel::<Bytes>();
+        let (cast_tx, _) = broadcast::channel(16);
         let (kill_tx, kill_rx) = oneshot::channel();
 
         let cmd = run(&config.cmd, &config.args, port);
@@ -150,9 +190,10 @@ impl Process {
 
         Self {
             source,
+            is_binary: config.binary,
             tx,
             rx: Some(rx),
-            broadcast_tx,
+            cast_tx,
             kill_tx: Some(kill_tx),
             kill_rx: Some(kill_rx),
         }
@@ -164,7 +205,7 @@ mod tests {
 
     use clap::Parser;
 
-    use super::{handle, spawn, Process};
+    use super::{handle, spawn, Message, Process};
     use crate::cli::Config;
 
     fn create_process(args: &'static str) -> Process {
@@ -185,22 +226,22 @@ mod tests {
     #[tokio::test]
     async fn test_handle_process_output() {
         let process = create_process("scalesocket echo -- foo");
-        let mut proc_rx = process.broadcast_tx.subscribe();
+        let mut proc_rx = process.cast_tx.subscribe();
 
         handle(process).await.ok();
         let output = proc_rx.recv().await.ok();
 
-        assert_eq!(output, Some("foo".to_string()));
+        assert_eq!(output, Some(Message::text("foo")));
     }
 
     #[tokio::test]
     async fn test_handle_process_input() {
         let process = create_process("scalesocket head -- -n 1");
-        let mut proc_rx = process.broadcast_tx.subscribe();
+        let mut proc_rx = process.cast_tx.subscribe();
         let sock_tx = process.tx.clone();
 
         let send = async {
-            sock_tx.send("foo\n".to_string()).ok();
+            sock_tx.send("foo\n".into()).ok();
             Ok(())
         };
         let handle = handle(process);
@@ -208,6 +249,6 @@ mod tests {
         tokio::try_join!(handle, send).ok();
         let output = proc_rx.recv().await.ok();
 
-        assert_eq!(output, Some("foo".to_string()));
+        assert_eq!(output, Some(Message::text("foo")));
     }
 }
