@@ -224,7 +224,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_handle_process_output() {
+    async fn test_handle_process_output_lines() {
         let process = create_process("scalesocket echo -- foo");
         let mut proc_rx = process.cast_tx.subscribe();
 
@@ -232,6 +232,17 @@ mod tests {
         let output = proc_rx.recv().await.ok();
 
         assert_eq!(output, Some(Message::text("foo")));
+    }
+
+    #[tokio::test]
+    async fn test_handle_process_output_binary() {
+        let process = create_process("scalesocket --binary echo");
+        let mut proc_rx = process.cast_tx.subscribe();
+
+        handle(process).await.ok();
+        let output = proc_rx.recv().await.ok();
+
+        assert_eq!(output, Some(Message::binary([10])));
     }
 
     #[tokio::test]
