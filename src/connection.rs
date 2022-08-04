@@ -3,11 +3,12 @@ use crate::{
     types::{FromProcessRx, ToProcessTx},
 };
 use {
+    bytes::Bytes,
     futures::{FutureExt, StreamExt, TryFutureExt},
     sender_sink::wrappers::UnboundedSenderSink,
     tokio::try_join,
     tokio_stream::wrappers::BroadcastStream,
-    warp::ws::{Message, WebSocket},
+    warp::ws::WebSocket,
 };
 
 pub async fn handle(ws: WebSocket, proc_rx: FromProcessRx, proc_tx: ToProcessTx) -> AppResult<()> {
@@ -18,12 +19,12 @@ pub async fn handle(ws: WebSocket, proc_rx: FromProcessRx, proc_tx: ToProcessTx)
 
     // forward process to socket
     let proc_to_sock = proc_rx
-        .filter_map(|line| async { line.ok().map(|t| Ok(Message::text(t))).or(None) })
+        .filter_map(|line| async { line.ok().map(|t| Ok(t)).or(None) })
         .forward(sock_tx);
 
     // forward socket to process
     let sock_to_proc = sock_rx
-        .filter_map(|msg| async { msg.ok().map(|m| Ok(m.to_str().unwrap_or("").to_string())) })
+        .filter_map(|msg| async { msg.map(|msg| Ok(Bytes::from(msg.into_bytes()))).ok() })
         .forward(proc_tx_sink);
 
     // exit in case receiver is dropped (process::handle exited)

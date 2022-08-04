@@ -81,7 +81,7 @@ fn attach(room: RoomID, ws: Box<WebSocket>, tx: &EventTx, state: &mut State) {
             // Inform child
             if let Some(ref join_msg_template) = state.cfg.joinmsg {
                 let join_msg = join_msg_template.replace("%ID", &conn.to_string());
-                let _ = proc_tx.send(join_msg);
+                let _ = proc_tx.send(join_msg.into());
             }
         }
     };
@@ -121,7 +121,7 @@ fn spawn(room: &RoomID, tx: &EventTx, state: &mut State) {
     }
 
     let mut proc = Process::new(&state.cfg, port);
-    let proc_tx_broadcast = proc.broadcast_tx.clone();
+    let proc_tx_broadcast = proc.cast_tx.clone();
     let proc_tx = proc.tx.clone();
     let kill_tx = proc.kill_tx.take().unwrap();
 
@@ -177,7 +177,7 @@ fn disconnect(room: RoomID, conn: ConnID, state: &mut State) {
         // Inform child
         if let Some(ref leave_msg_template) = state.cfg.leavemsg {
             let leave_msg = leave_msg_template.replace("%ID", &conn.to_string());
-            let _ = proc_tx.send(leave_msg);
+            let _ = proc_tx.send(leave_msg.into());
         }
     }
 
@@ -212,15 +212,15 @@ mod tests {
     use std::collections::{HashMap, HashSet};
     use tokio::sync::{broadcast, mpsc, oneshot};
 
-    use super::{disconnect, FromProcessTx, ShutdownTx, State, ToProcessTx, PortPool};
+    use super::{disconnect, FromProcessTx, PortPool, ShutdownTx, State, ToProcessTx};
 
     fn create_config(args: &'static str) -> Config {
         Config::parse_from(args.split_whitespace())
     }
 
     fn create_process_handle() -> (FromProcessTx, ToProcessTx, ShutdownTx) {
-        let (tx, _) = mpsc::unbounded_channel::<String>();
-        let (broadcast_tx, _) = broadcast::channel::<String>(16);
+        let (tx, _) = mpsc::unbounded_channel();
+        let (broadcast_tx, _) = broadcast::channel(16);
         let (kill_tx, _) = oneshot::channel();
         (broadcast_tx, tx, kill_tx)
     }

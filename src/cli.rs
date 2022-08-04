@@ -7,6 +7,10 @@ pub struct Config {
     #[clap(long, default_value = "0.0.0.0:9000")]
     pub addr: SocketAddr,
 
+    /// Set scalesocket to experimental binary mode (default is line by line)
+    #[clap(short, long, action)]
+    pub binary: bool,
+
     /// Log JSON
     #[clap(short, long, action)]
     pub json: bool,

@@ -14,5 +14,6 @@ thiserror = "1.0.31"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json"] }
 tokio = { version = "1.18.2", features = ["full", "tracing"] }
-tokio-stream = { version = "0.1.8", features = ["sync"] }
+tokio-stream = { version = "0.1.8", features = ["sync", "net", "io-util"] }
+tokio-util = { version = "0.7.3", features = ["io"] }
 warp = "0.3"
