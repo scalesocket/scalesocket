@@ -17,6 +17,9 @@ pub enum AppError {
     #[error("Failed to use channel {0}")]
     ChannelError(&'static str),
 
-    #[error("Failed to process io")]
+    #[error("Failed to spawn process due to `{0}`")]
+    ProcessSpawnError(String),
+
+    #[error("Failed to process io due to `{0}`")]
     GenericError(#[from] std::io::Error),
 }

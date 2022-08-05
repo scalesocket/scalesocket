@@ -212,7 +212,6 @@ mod tests {
         let handle = events::handle(rx, tx.clone(), config);
 
         let _ = tokio::try_join!(handle, shutdown, inspect);
-
         assert_eq!(received_messages, vec!["hello"]);
     }
 }

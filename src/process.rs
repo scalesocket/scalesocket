@@ -14,21 +14,39 @@ use {
     std::io::Result as IOResult,
     std::net::SocketAddr,
     std::net::SocketAddrV4,
+    std::sync::Arc,
     tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     tokio::net::TcpStream,
     tokio::process::{Child, Command},
+    tokio::sync::Barrier,
     tokio::sync::{broadcast, mpsc, oneshot},
     tokio::time::{sleep, Duration},
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
     tokio_util::codec::{BytesCodec, FramedRead},
+    tracing::instrument,
     warp::ws::Message,
 };
 
-pub async fn handle(mut process: Process) -> AppResult<Option<i32>> {
+#[instrument(parent = None, name = "process", skip_all)]
+pub async fn handle(mut process: Process, barrier: Option<Arc<Barrier>>) -> AppResult<Option<i32>> {
+    if let Some(barrier) = barrier.clone() {
+        barrier.wait().await;
+        tracing::debug!("waited for connection");
+    }
     let mut proc = spawn(&mut process).await?;
     let mut child = proc.child.take().unwrap();
 
+    let cast = |msg: Bytes| {
+        if process.is_binary {
+            let _ = process.cast_tx.send(Message::binary(msg));
+        } else {
+            let msg = std::str::from_utf8(&msg).unwrap_or_default();
+            let _ = process.cast_tx.send(Message::text(msg));
+        };
+    };
+
     tracing::debug! { "process handler listening to child" };
+
     let exit_code = loop {
         tokio::select! {
             Some(v) = proc.sock_rx.next() => {
@@ -38,16 +56,9 @@ pub async fn handle(mut process: Process) -> AppResult<Option<i32>> {
                     proc.proc_tx.write_all(&[&v[..], b"\n"].concat()).await?;
                 };
             }
-            Some(v) = proc.proc_rx.next() => {
-                if let Ok(msg) = v {
-                    if process.is_binary {
-                        let _ = process.cast_tx.send(Message::binary(msg));
-                    } else {
-                        let msg = std::str::from_utf8(&msg).unwrap_or_default();
-                        let _ = process.cast_tx.send(Message::text(msg));
-                    };
-                }
-            }
+            Some(Ok(msg)) = proc.proc_rx.next() => {
+                cast(msg);
+            },
             _ = proc.kill_rx.next() => {
                 // TODO propagate signal to child
                 break None;
@@ -57,6 +68,12 @@ pub async fn handle(mut process: Process) -> AppResult<Option<i32>> {
             },
         }
     };
+
+    // Stream remaining messages
+    while let Some(Ok(msg)) = proc.proc_rx.next().await {
+        cast(msg);
+    }
+
     tracing::debug! { "process handler done" };
     Ok(exit_code)
 }
@@ -64,10 +81,11 @@ pub async fn handle(mut process: Process) -> AppResult<Option<i32>> {
 async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
     let kill_rx = process.kill_rx.take().unwrap().into_stream();
     let sock_rx = UnboundedReceiverStream::new(process.rx.take().unwrap());
-
     match process.source.take().unwrap() {
         Source::Stdio(mut cmd) => {
-            let mut child = cmd.spawn()?;
+            let mut child = cmd
+                .spawn()
+                .map_err(|e| AppError::ProcessSpawnError(e.to_string()))?;
             tracing::debug!("spawned childprocess");
 
             let stdin = child
@@ -224,14 +242,25 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_handle_process_output() {
+    async fn test_handle_process_output_lines() {
         let process = create_process("scalesocket echo -- foo");
         let mut proc_rx = process.cast_tx.subscribe();
 
-        handle(process).await.ok();
+        handle(process, None).await.ok();
         let output = proc_rx.recv().await.ok();
 
         assert_eq!(output, Some(Message::text("foo")));
+    }
+
+    #[tokio::test]
+    async fn test_handle_process_output_binary() {
+        let process = create_process("scalesocket --binary echo");
+        let mut proc_rx = process.cast_tx.subscribe();
+
+        handle(process, None).await.ok();
+        let output = proc_rx.recv().await.ok();
+
+        assert_eq!(output, Some(Message::binary([10])));
     }
 
     #[tokio::test]
@@ -244,7 +273,7 @@ mod tests {
             sock_tx.send("foo\n".into()).ok();
             Ok(())
         };
-        let handle = handle(process);
+        let handle = handle(process, None);
 
         tokio::try_join!(handle, send).ok();
         let output = proc_rx.recv().await.ok();
