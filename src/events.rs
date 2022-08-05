@@ -55,6 +55,11 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<(
                 exit(room, code, port, &mut state);
             }
             Event::Shutdown => {
+                tracing::debug!("killing processes");
+                let procs: Vec<_> = state.procs.into_values().collect();
+                for (_, _, kill_tx) in procs.into_iter() {
+                    let _ = kill_tx.send(());
+                }
                 break;
             }
         }
