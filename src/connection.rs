@@ -28,7 +28,7 @@ pub async fn handle(
 
     // forward process to socket
     let proc_to_sock = proc_rx
-        .filter_map(|line| async { line.ok().map(|t| Ok(t)).or(None) })
+        .filter_map(|line| async { line.ok().map(Ok).or(None) })
         .forward(sock_tx);
 
     // forward socket to process

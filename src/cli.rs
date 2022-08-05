@@ -49,11 +49,11 @@ pub struct Config {
 }
 
 fn parse_ports(arg: &str) -> Result<Range<u16>, &'static str> {
-    if let Some((start, end)) = arg.split_once(":") {
+    if let Some((start, end)) = arg.split_once(':') {
         let range: (Option<u16>, Option<u16>) = (start.parse().ok(), end.parse().ok());
         if let (Some(start), Some(end)) = range {
             return Ok(start..end);
         }
     };
-    return Err("Could not parse port range");
+    Err("Could not parse port range")
 }

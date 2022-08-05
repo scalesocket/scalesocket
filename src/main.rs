@@ -205,7 +205,7 @@ mod tests {
             Ok(())
         };
         let shutdown = async {
-            sleep(Duration::from_millis(500)).await;
+            sleep(Duration::from_millis(250)).await;
             tx.send(Event::Shutdown).ok();
             Ok(())
         };
