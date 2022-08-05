@@ -10,9 +10,11 @@ use {
     tokio::sync::Barrier,
     tokio::try_join,
     tokio_stream::wrappers::BroadcastStream,
+    tracing::instrument,
     warp::ws::WebSocket,
 };
 
+#[instrument(parent = None, name = "connection", skip_all)]
 pub async fn handle(
     ws: WebSocket,
     proc_rx: FromProcessRx,

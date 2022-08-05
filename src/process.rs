@@ -23,9 +23,11 @@ use {
     tokio::time::{sleep, Duration},
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
     tokio_util::codec::{BytesCodec, FramedRead},
+    tracing::instrument,
     warp::ws::Message,
 };
 
+#[instrument(parent = None, name = "process", skip_all)]
 pub async fn handle(mut process: Process, barrier: Option<Arc<Barrier>>) -> AppResult<Option<i32>> {
     if let Some(barrier) = barrier.clone() {
         barrier.wait().await;

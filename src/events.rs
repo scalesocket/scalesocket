@@ -29,6 +29,7 @@ struct State {
     pub cfg: Config,
 }
 
+#[instrument(name = "event", skip_all)]
 pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<()> {
     let mut state = State {
         conns: HashMap::new(),
@@ -61,7 +62,7 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<(
     Ok(())
 }
 
-#[instrument(name = "connection", skip(ws, tx, state))]
+#[instrument(name = "attach", skip(ws, tx, state, barrier))]
 fn attach(
     room: RoomID,
     ws: Box<WebSocket>,
@@ -117,7 +118,7 @@ fn attach(
     );
 }
 
-#[instrument(name = "process", skip(tx, state))]
+#[instrument(name = "spawn", skip(tx, state, barrier))]
 fn spawn(
     room: &RoomID,
     tx: &EventTx,
@@ -170,11 +171,12 @@ fn spawn(
             )
             .in_current_span(),
     );
+    // instead spawn two ::handle and wait both
 
     Ok(())
 }
 
-#[instrument(name = "connection", skip(conn, state))]
+#[instrument(name = "disconnect", skip(conn, state))]
 fn disconnect(room: RoomID, conn: ConnID, state: &mut State) {
     let room_conns = state.conns.entry(room.clone()).or_default();
 
@@ -204,7 +206,7 @@ fn disconnect(room: RoomID, conn: ConnID, state: &mut State) {
     }
 }
 
-#[instrument(name = "process", skip(code, port, state))]
+#[instrument(name = "exit", skip(code, port, state))]
 fn exit(room: RoomID, code: Option<i32>, port: Option<PortID>, state: &mut State) {
     if let Some(port) = port {
         let _ = state.ports.return_id(port);
