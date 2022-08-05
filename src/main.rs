@@ -205,14 +205,13 @@ mod tests {
             Ok(())
         };
         let shutdown = async {
-            sleep(Duration::from_millis(250)).await;
+            sleep(Duration::from_millis(500)).await;
             tx.send(Event::Shutdown).ok();
             Ok(())
         };
         let handle = events::handle(rx, tx.clone(), config);
 
         let _ = tokio::try_join!(handle, shutdown, inspect);
-
         assert_eq!(received_messages, vec!["hello"]);
     }
 }

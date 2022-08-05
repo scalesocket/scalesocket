@@ -13,6 +13,8 @@ use {
     futures::{FutureExt, TryFutureExt},
     id_pool::IdPool as PortPool,
     std::collections::{HashMap, HashSet},
+    std::sync::Arc,
+    tokio::sync::Barrier,
     tracing::{instrument, Instrument},
     warp::ws::WebSocket,
 };
@@ -38,12 +40,12 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<(
     while let Some(event) = rx.recv().await {
         match event {
             Event::Connect { room, ws } if state.procs.contains_key(&room) => {
-                attach(room, ws, &tx, &mut state);
+                attach(room, ws, &tx, &mut state, None);
             }
             Event::Connect { room, ws } => {
-                spawn(&room, &tx, &mut state);
-                // TODO handle spawn error if spawn.is_ok() else tracing::error
-                attach(room, ws, &tx, &mut state);
+                let barrier = Arc::new(Barrier::new(2));
+                let _ = spawn(&room, &tx, &mut state, Some(barrier.clone()));
+                attach(room, ws, &tx, &mut state, Some(barrier.clone()));
             }
             Event::Disconnect { room, conn } => {
                 disconnect(room, conn, &mut state);
@@ -60,7 +62,13 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<(
 }
 
 #[instrument(name = "connection", skip(ws, tx, state))]
-fn attach(room: RoomID, ws: Box<WebSocket>, tx: &EventTx, state: &mut State) {
+fn attach(
+    room: RoomID,
+    ws: Box<WebSocket>,
+    tx: &EventTx,
+    state: &mut State,
+    barrier: Option<Arc<Barrier>>,
+) {
     let conn = new_conn_id();
 
     // Get process handles from map
@@ -98,7 +106,7 @@ fn attach(room: RoomID, ws: Box<WebSocket>, tx: &EventTx, state: &mut State) {
     };
 
     tokio::spawn(
-        connection::handle(*ws, proc_rx, proc_tx.clone())
+        connection::handle(*ws, proc_rx, proc_tx.clone(), barrier)
             .then({
                 // NOTE: we invoke on_connect closure immediately...
                 on_connect();
@@ -110,11 +118,13 @@ fn attach(room: RoomID, ws: Box<WebSocket>, tx: &EventTx, state: &mut State) {
 }
 
 #[instrument(name = "process", skip(tx, state))]
-fn spawn(room: &RoomID, tx: &EventTx, state: &mut State) {
-    let port = match state.cfg.tcp {
-        true => state.ports.request_id(),
-        false => None,
-    };
+fn spawn(
+    room: &RoomID,
+    tx: &EventTx,
+    state: &mut State,
+    barrier: Option<Arc<Barrier>>,
+) -> AppResult<()> {
+    let port = state.ports.request_id();
 
     if let Some(port) = port {
         tracing::debug!("reserved port {}", port);
@@ -139,13 +149,13 @@ fn spawn(room: &RoomID, tx: &EventTx, state: &mut State) {
         // Return callback for process::handle
         move |code: Option<i32>| {
             tx.send(Event::ProcessExit { room, code, port })
-                .expect("Failed to send ProcessExit event");
+                .expect("failed to send ProcessExit event");
             Ok(())
         }
     };
 
     tokio::spawn(
-        process::handle(proc)
+        process::handle(proc, barrier)
             .map_ok_or_else(
                 move |e| {
                     tracing::error!("{}", e);
@@ -160,6 +170,8 @@ fn spawn(room: &RoomID, tx: &EventTx, state: &mut State) {
             )
             .in_current_span(),
     );
+
+    Ok(())
 }
 
 #[instrument(name = "connection", skip(conn, state))]
@@ -167,6 +179,7 @@ fn disconnect(room: RoomID, conn: ConnID, state: &mut State) {
     let room_conns = state.conns.entry(room.clone()).or_default();
 
     // Get process handles from map
+    // TODO bug this will prevent leaving room after process has quit
     let (_, proc_tx, _) = state.procs.get(&room).expect("room not in process map");
 
     let is_removed = room_conns.remove(&conn);
@@ -234,7 +247,7 @@ mod tests {
             ]),
             procs: HashMap::from([("room1".to_string(), create_process_handle())]),
             cfg: create_config("scalesocket cat"),
-            ports: PortPool::new()
+            ports: PortPool::new(),
         };
 
         disconnect("room1".to_string(), 1, &mut state);

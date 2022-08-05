@@ -14,9 +14,11 @@ use {
     std::io::Result as IOResult,
     std::net::SocketAddr,
     std::net::SocketAddrV4,
+    std::sync::Arc,
     tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     tokio::net::TcpStream,
     tokio::process::{Child, Command},
+    tokio::sync::Barrier,
     tokio::sync::{broadcast, mpsc, oneshot},
     tokio::time::{sleep, Duration},
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
@@ -24,7 +26,11 @@ use {
     warp::ws::Message,
 };
 
-pub async fn handle(mut process: Process) -> AppResult<Option<i32>> {
+pub async fn handle(mut process: Process, barrier: Option<Arc<Barrier>>) -> AppResult<Option<i32>> {
+    if let Some(barrier) = barrier.clone() {
+        barrier.wait().await;
+        tracing::debug!("waited for connection");
+    }
     let mut proc = spawn(&mut process).await?;
     let mut child = proc.child.take().unwrap();
 
@@ -47,7 +53,7 @@ pub async fn handle(mut process: Process) -> AppResult<Option<i32>> {
                         let _ = process.cast_tx.send(Message::text(msg));
                     };
                 }
-            }
+            },
             _ = proc.kill_rx.next() => {
                 // TODO propagate signal to child
                 break None;
@@ -64,10 +70,11 @@ pub async fn handle(mut process: Process) -> AppResult<Option<i32>> {
 async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
     let kill_rx = process.kill_rx.take().unwrap().into_stream();
     let sock_rx = UnboundedReceiverStream::new(process.rx.take().unwrap());
-
     match process.source.take().unwrap() {
         Source::Stdio(mut cmd) => {
-            let mut child = cmd.spawn()?;
+            let mut child = cmd
+                .spawn()
+                .map_err(|e| AppError::ProcessSpawnError(e.to_string()))?;
             tracing::debug!("spawned childprocess");
 
             let stdin = child
@@ -228,7 +235,7 @@ mod tests {
         let process = create_process("scalesocket echo -- foo");
         let mut proc_rx = process.cast_tx.subscribe();
 
-        handle(process).await.ok();
+        handle(process, None).await.ok();
         let output = proc_rx.recv().await.ok();
 
         assert_eq!(output, Some(Message::text("foo")));
@@ -239,7 +246,7 @@ mod tests {
         let process = create_process("scalesocket --binary echo");
         let mut proc_rx = process.cast_tx.subscribe();
 
-        handle(process).await.ok();
+        handle(process, None).await.ok();
         let output = proc_rx.recv().await.ok();
 
         assert_eq!(output, Some(Message::binary([10])));
@@ -255,7 +262,7 @@ mod tests {
             sock_tx.send("foo\n".into()).ok();
             Ok(())
         };
-        let handle = handle(process);
+        let handle = handle(process, None);
 
         tokio::try_join!(handle, send).ok();
         let output = proc_rx.recv().await.ok();
