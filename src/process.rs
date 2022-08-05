@@ -36,7 +36,17 @@ pub async fn handle(mut process: Process, barrier: Option<Arc<Barrier>>) -> AppR
     let mut proc = spawn(&mut process).await?;
     let mut child = proc.child.take().unwrap();
 
+    let cast = |msg: Bytes| {
+        if process.is_binary {
+            let _ = process.cast_tx.send(Message::binary(msg));
+        } else {
+            let msg = std::str::from_utf8(&msg).unwrap_or_default();
+            let _ = process.cast_tx.send(Message::text(msg));
+        };
+    };
+
     tracing::debug! { "process handler listening to child" };
+
     let exit_code = loop {
         tokio::select! {
             Some(v) = proc.sock_rx.next() => {
@@ -46,15 +56,8 @@ pub async fn handle(mut process: Process, barrier: Option<Arc<Barrier>>) -> AppR
                     proc.proc_tx.write_all(&[&v[..], b"\n"].concat()).await?;
                 };
             }
-            Some(v) = proc.proc_rx.next() => {
-                if let Ok(msg) = v {
-                    if process.is_binary {
-                        let _ = process.cast_tx.send(Message::binary(msg));
-                    } else {
-                        let msg = std::str::from_utf8(&msg).unwrap_or_default();
-                        let _ = process.cast_tx.send(Message::text(msg));
-                    };
-                }
+            Some(Ok(msg)) = proc.proc_rx.next() => {
+                cast(msg);
             },
             _ = proc.kill_rx.next() => {
                 // TODO propagate signal to child
@@ -65,6 +68,12 @@ pub async fn handle(mut process: Process, barrier: Option<Arc<Barrier>>) -> AppR
             },
         }
     };
+
+    // Stream remaining messages
+    while let Some(Ok(msg)) = proc.proc_rx.next().await {
+        cast(msg);
+    }
+
     tracing::debug! { "process handler done" };
     Ok(exit_code)
 }
