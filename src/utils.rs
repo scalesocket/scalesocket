@@ -34,3 +34,21 @@ where
 pub fn exit_code<T>(status: Result<ExitStatus, T>) -> Option<i32> {
     status.ok().and_then(|s| s.code()).or(None)
 }
+
+// utility filters for warp
+pub mod warpext {
+    use warp::{self, Filter, Rejection};
+
+    pub fn enable_if(condition: bool) -> impl Filter<Extract = (), Error = Rejection> + Copy {
+        warp::any()
+            .and_then(async move || {
+                if condition {
+                    Ok(())
+                } else {
+                    Err(warp::reject::not_found())
+                }
+            })
+            // deal with Ok(())
+            .untuple_one()
+    }
+}

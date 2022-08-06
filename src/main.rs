@@ -55,6 +55,7 @@ mod routes {
     use crate::{
         cli::Config,
         types::{Event, EventTx, RoomID, ShutdownRx},
+        utils::warpext,
     };
     use {
         serde_json::json,
@@ -102,20 +103,7 @@ mod routes {
     pub fn files(
         path: Option<PathBuf>,
     ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-        enable_if(path.is_some()).and(warp::fs::dir(path.unwrap_or_default()))
-    }
-
-    fn enable_if(condition: bool) -> impl Filter<Extract = (), Error = Rejection> + Copy {
-        warp::any()
-            .and_then(async move || {
-                if condition {
-                    Ok(())
-                } else {
-                    Err(warp::reject::not_found())
-                }
-            })
-            // deal with Ok(())
-            .untuple_one()
+        warpext::enable_if(path.is_some()).and(warp::fs::dir(path.unwrap_or_default()))
     }
 }
 
