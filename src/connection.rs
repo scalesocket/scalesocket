@@ -73,8 +73,8 @@ pub async fn handle(
         match e {
             AppError::StreamClosed(_) => {}
             AppError::StreamError(_) if proc_tx.is_closed() => {}
-            AppError::StreamError(e) => tracing::debug!("Failed to stream {}", e),
-            AppError::ChannelError(e) => tracing::error!("Channel from {} closed", e),
+            AppError::StreamError(e) => tracing::debug!("failed to stream {}", e),
+            AppError::ChannelError(e) => tracing::error!("channel from {} closed", e),
             _ => unreachable!(),
         }
     }

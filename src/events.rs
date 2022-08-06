@@ -154,8 +154,8 @@ fn spawn(
 
         // Return callback for process::handle
         move |code: Option<i32>| {
-            tx.send(Event::ProcessExit { room, code, port })
-                .expect("failed to send ProcessExit event");
+            // if sending fails, the events::handle has already been torn down
+            let _ = tx.send(Event::ProcessExit { room, code, port });
             Ok(())
         }
     };
