@@ -35,6 +35,7 @@ pub fn socket(tx: EventTx) -> impl Filter<Extract = impl Reply, Error = Rejectio
                 let event = Event::Connect {
                     ws: Box::new(ws),
                     room,
+                    env,
                 };
                 tx.send(event).expect("Failed to send Connect event");
                 async {}

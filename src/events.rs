@@ -40,10 +40,10 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<(
 
     while let Some(event) = rx.recv().await {
         match event {
-            Event::Connect { room, ws } if state.procs.contains_key(&room) => {
+            Event::Connect { room, ws, env } if state.procs.contains_key(&room) => {
                 attach(room, ws, &tx, &mut state, None);
             }
-            Event::Connect { room, ws } => {
+            Event::Connect { room, ws, env } => {
                 let barrier = Arc::new(Barrier::new(2));
                 let _ = spawn(&room, &tx, &mut state, Some(barrier.clone()));
                 attach(room, ws, &tx, &mut state, Some(barrier.clone()));

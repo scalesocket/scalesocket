@@ -15,6 +15,7 @@ pub enum Event {
     Connect {
         room: RoomID,
         ws: Box<WebSocket>,
+        env: CGIEnv,
     },
     Disconnect {
         room: RoomID,
