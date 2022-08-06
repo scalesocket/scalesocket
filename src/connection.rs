@@ -4,7 +4,7 @@ use crate::{
 };
 use {
     bytes::Bytes,
-    futures::{FutureExt, StreamExt, TryFutureExt},
+    futures::{future::ready, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
     sender_sink::wrappers::UnboundedSenderSink,
     std::sync::Arc,
     tokio::sync::Barrier,
@@ -22,7 +22,6 @@ pub async fn handle(
     barrier: Option<Arc<Barrier>>,
 ) -> AppResult<()> {
     let proc_rx = BroadcastStream::new(proc_rx);
-    let proc_tx_sink = UnboundedSenderSink::from(proc_tx.clone());
     let (sock_tx, sock_rx) = ws.split();
     tracing::debug! { "connection handler listening to client" };
 
@@ -31,10 +30,24 @@ pub async fn handle(
         .filter_map(|line| async { line.ok().map(Ok).or(None) })
         .forward(sock_tx);
 
-    // forward socket to process
-    let sock_to_proc = sock_rx
-        .filter_map(|msg| async { msg.map(|msg| Ok(Bytes::from(msg.into_bytes()))).ok() })
-        .forward(proc_tx_sink);
+    // forward socket to process, until closed
+    let sock_to_proc = {
+        let proc_tx_sink = UnboundedSenderSink::from(proc_tx.clone());
+
+        async move {
+            // forward until close message from client
+            let result = sock_rx
+                .try_take_while(|msg| ready(Ok(!msg.is_close())))
+                .filter_map(|data| ready(data.map(|msg| Ok(Bytes::from(msg.into_bytes()))).ok()))
+                .forward(proc_tx_sink)
+                .await;
+
+            Err::<(), AppError>(match result {
+                Ok(_) => AppError::StreamClosed("client"),
+                Err(_) => AppError::StreamError("socket to process"),
+            })
+        }
+    };
 
     // exit in case receiver is dropped (process::handle exited)
     let proc_exit = proc_tx.closed().map(|_| Err::<(), ()>(()));
@@ -52,12 +65,13 @@ pub async fn handle(
     };
 
     if let Err(e) = try_join!(
-        proc_ready.map_err(|_| AppError::StreamError("due to spawn failure")),
+        sock_to_proc,
         proc_to_sock.map_err(|_| AppError::StreamError("process to socket")),
-        sock_to_proc.map_err(|_| AppError::StreamError("socket to process")),
         proc_exit.map_err(|_| AppError::ChannelError("process to socket")),
+        proc_ready.map_err(|_| AppError::StreamError("due to spawn failure")),
     ) {
         match e {
+            AppError::StreamClosed(_) => {}
             AppError::StreamError(_) if proc_tx.is_closed() => {}
             AppError::StreamError(e) => tracing::debug!("Failed to stream {}", e),
             AppError::ChannelError(e) => tracing::error!("Channel from {} closed", e),

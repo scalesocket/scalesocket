@@ -14,6 +14,9 @@ pub enum AppError {
     #[error("Failed to stream {0}")]
     StreamError(&'static str),
 
+    #[error("Stream from {0} closed")]
+    StreamClosed(&'static str),
+
     #[error("Failed to use channel {0}")]
     ChannelError(&'static str),
 
