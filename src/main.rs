@@ -54,7 +54,7 @@ mod routes {
 
     use crate::{
         cli::Config,
-        types::{Event, EventTx, RoomID, ShutdownRx},
+        types::{CGIEnv, Event, EventTx, RoomID, ShutdownRx},
         utils::warpext,
     };
     use {
@@ -80,7 +80,8 @@ mod routes {
         warp::path!(String)
             .and(warp::path::end())
             .and(warp::ws())
-            .map(move |room: RoomID, websocket: Ws| {
+            .and(warpext::cgi_env())
+            .map(move |room: RoomID, websocket: Ws, env: CGIEnv| {
                 let tx = tx.clone();
                 websocket.on_upgrade(move |ws| {
                     let event = Event::Connect {

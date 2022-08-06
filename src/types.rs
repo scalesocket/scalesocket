@@ -1,5 +1,6 @@
 use {
     bytes::Bytes,
+    std::net::SocketAddr,
     tokio::sync::{broadcast, mpsc, oneshot},
     tokio_stream::wrappers::UnboundedReceiverStream,
     warp::ws::{Message, WebSocket},
@@ -44,3 +45,25 @@ pub type ShutdownRxStream = futures::future::IntoStream<ShutdownRx>;
 // Channel for passing data to from child process
 pub type FromProcessTx = broadcast::Sender<Message>;
 pub type FromProcessRx = broadcast::Receiver<Message>;
+
+#[derive(Debug, Default)]
+pub struct CGIEnv {
+    /// URL-encoded search or parameter string
+    query_string: String,
+    /// network address of the client sending the request
+    remote_addr: String,
+}
+
+impl CGIEnv {
+    pub fn from_filter(query_string: Option<String>, remote_addr: Option<SocketAddr>) -> Self {
+        let query_string = query_string.unwrap_or_default();
+        let remote_addr = remote_addr
+            .map(|a| a.to_string())
+            .unwrap_or_else(|| "".to_string());
+
+        Self {
+            query_string,
+            remote_addr,
+        }
+    }
+}

@@ -37,7 +37,10 @@ pub fn exit_code<T>(status: Result<ExitStatus, T>) -> Option<i32> {
 
 // utility filters for warp
 pub mod warpext {
+    use crate::types::CGIEnv;
     use warp::{self, Filter, Rejection};
+
+    pub type One<T> = (T,);
 
     pub fn enable_if(condition: bool) -> impl Filter<Extract = (), Error = Rejection> + Copy {
         warp::any()
@@ -47,6 +50,21 @@ pub mod warpext {
                 } else {
                     Err(warp::reject::not_found())
                 }
+            })
+            // deal with Ok(())
+            .untuple_one()
+    }
+
+    pub fn cgi_env() -> impl Filter<Extract = One<CGIEnv>, Error = Rejection> + Copy {
+        let optional_query = warp::query::raw()
+            .map(Some)
+            .or_else(|_| async { Ok::<One<Option<String>>, std::convert::Infallible>((None,)) });
+
+        warp::any()
+            .and(optional_query)
+            .and(warp::addr::remote())
+            .and_then(async move |query, addr| {
+                Ok::<_, Rejection>((CGIEnv::from_filter(query, addr),))
             })
             // deal with Ok(())
             .untuple_one()
