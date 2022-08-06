@@ -56,8 +56,8 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<(
             }
             Event::Shutdown => {
                 tracing::debug!("killing processes");
-                let procs: Vec<_> = state.procs.into_values().collect();
-                for (_, _, kill_tx) in procs.into_iter() {
+                let procs = state.procs.into_values();
+                for (_, _, kill_tx) in procs {
                     let _ = kill_tx.send(());
                 }
                 break;
@@ -176,7 +176,6 @@ fn spawn(
             )
             .in_current_span(),
     );
-    // instead spawn two ::handle and wait both
 
     Ok(())
 }

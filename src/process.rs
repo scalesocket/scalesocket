@@ -188,8 +188,7 @@ struct RunningProcess {
 }
 
 type FromProcessTxAny = Box<dyn tokio::io::AsyncWrite + Unpin + Send>;
-type FromProcessRxAny =
-    Box<dyn futures::Stream<Item = Result<Bytes, std::io::Error>> + Unpin + Send>;
+type FromProcessRxAny = Box<dyn futures::Stream<Item = IOResult<Bytes>> + Unpin + Send>;
 
 impl Process {
     pub fn new(config: &Config, port: Option<PortID>) -> Self {
