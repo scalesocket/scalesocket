@@ -23,6 +23,10 @@ pub struct Config {
     #[clap(long, value_name = "MSG")]
     pub leavemsg: Option<String>,
 
+    /// Expose OpenMetrics endpoint at /metrics
+    #[clap(long, action)]
+    pub metrics: bool,
+
     /// List of envvars to pass to child
     #[clap(
         long,
