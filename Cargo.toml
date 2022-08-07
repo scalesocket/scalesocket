@@ -8,6 +8,7 @@ bytes = "1.2.0"
 clap = { version = "3.1.18", features = ["derive"] }
 futures = "0.3.21"
 id-pool = { version = "0.2.2", default-features = false, features = ["u16"] }
+prometheus-client = "0.17.0"
 sender-sink = "0.1.0"
 serde_json = "1.0.81"
 thiserror = "1.0.31"
