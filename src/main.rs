@@ -1,4 +1,4 @@
-#![feature(async_closure)]
+#![feature(async_closure, bool_to_option)]
 mod cli;
 mod connection;
 mod error;
@@ -31,7 +31,7 @@ async fn main() {
     let (routes_shutdown_tx, routes_shutdown_rx) = sync::oneshot::channel();
     let events_shutdown_tx = tx.clone();
 
-    let mut registry = <Registry>::default();
+    let mut registry = config.metrics.then_some(<Registry>::default());
     let metrics = Metrics::new(&mut registry);
 
     tracing::info! { "listening at {}", config.addr };
@@ -103,7 +103,7 @@ mod tests {
     }
 
     fn create_metrics() -> Metrics {
-        Metrics::new(&mut <Registry>::default())
+        Metrics::new(&mut Some(<Registry>::default()))
     }
 
     #[tokio::test]

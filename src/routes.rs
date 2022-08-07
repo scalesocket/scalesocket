@@ -18,15 +18,15 @@ pub fn handle(
     tx: EventTx,
     config: Config,
     shutdown_rx: ShutdownRx,
-    registry: Registry,
+    registry: Option<Registry>,
 ) -> impl futures::Future<Output = ()> {
     let shutdown_rx = shutdown_rx.map(|_| ());
 
     warp::serve(
         socket(tx)
             .or(health())
-            .or(files(config.staticdir.clone()))
-            .or(metrics(registry)),
+            .or(metrics(registry))
+            .or(files(config.staticdir.clone())),
     )
     .bind_with_graceful_shutdown(config.addr, shutdown_rx)
     .1
@@ -58,15 +58,23 @@ pub fn health() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone 
         .map(|| warp::reply::json(&json!({"status" : "ok"})))
 }
 
-pub fn metrics(registry: Registry) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+pub fn metrics(
+    registry: Option<Registry>,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     let registry = std::sync::Arc::new(registry);
-    warp::path("metrics")
+    warpext::enable_if(registry.is_some())
+        .and(warp::path("metrics"))
         .and(warp::path::end())
         .and(warp::get())
         .map(move || {
             // Encode metrics
             let mut buffer = Vec::new();
-            let res = encode(&mut buffer, &registry);
+            let res = match *registry {
+                Some(ref registry) => encode(&mut buffer, &registry),
+                // Unreachable, since registry.is_some()
+                None => unreachable!(),
+            };
+
             let encoded = match res.is_ok() {
                 true => String::from_utf8(buffer).ok(),
                 false => None,
@@ -116,7 +124,7 @@ mod tests {
             "Example description",
             Box::new(Family::<(), Counter>::default()),
         );
-        let api = metrics(registry);
+        let api = metrics(Some(registry));
 
         let resp = request().method("GET").path("/metrics").reply(&api).await;
 
