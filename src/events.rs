@@ -2,6 +2,7 @@ use crate::{
     cli::Config,
     connection,
     error::AppResult,
+    metrics::Metrics,
     process::{self, Process},
     types::{
         CGIEnv, ConnID, Event, EventRx, EventTx, FromProcessTx, PortID, RoomID, ShutdownTx,
@@ -31,7 +32,12 @@ struct State {
 }
 
 #[instrument(name = "event", skip_all)]
-pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<()> {
+pub async fn handle(
+    mut rx: EventRx,
+    tx: EventTx,
+    config: Config,
+    metrics: Metrics,
+) -> AppResult<()> {
     let mut state = State {
         conns: HashMap::new(),
         procs: HashMap::new(),
@@ -42,9 +48,11 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<(
     while let Some(event) = rx.recv().await {
         match event {
             Event::Connect { room, ws, .. } if state.procs.contains_key(&room) => {
+                metrics.inc_ws_connections(&room);
                 attach(room, ws, &tx, &mut state, None);
             }
             Event::Connect { room, ws, env } => {
+                metrics.inc_ws_connections(&room);
                 let spawn_barrier = Some(Arc::new(Barrier::new(2)));
                 let attach_barrier = spawn_barrier.clone();
 
@@ -52,6 +60,7 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<(
                 attach(room, ws, &tx, &mut state, attach_barrier);
             }
             Event::Disconnect { room, conn } => {
+                metrics.dec_ws_connections(&room);
                 disconnect(room, conn, &mut state);
             }
             Event::ProcessExit { room, code, port } => {

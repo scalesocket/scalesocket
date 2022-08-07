@@ -10,11 +10,12 @@ mod routes;
 mod types;
 mod utils;
 
-use crate::{cli::Config, logging::setup_logging, types::Event};
+use crate::{cli::Config, logging::setup_logging, metrics::Metrics, types::Event};
 
 use {
     clap::Parser,
     futures::FutureExt,
+    prometheus_client::registry::Registry,
     tokio::signal::unix::{signal, SignalKind},
     tokio::sync,
     tokio::try_join,
@@ -30,10 +31,13 @@ async fn main() {
     let (routes_shutdown_tx, routes_shutdown_rx) = sync::oneshot::channel();
     let events_shutdown_tx = tx.clone();
 
+    let mut registry = <Registry>::default();
+    let metrics = Metrics::new(&mut registry);
+
     tracing::info! { "listening at {}", config.addr };
 
-    let handle_events = events::handle(rx, tx.clone(), config.clone()).unit_error();
-    let handle_routes = routes::handle(tx, config, routes_shutdown_rx).unit_error();
+    let handle_events = events::handle(rx, tx.clone(), config.clone(), metrics).unit_error();
+    let handle_routes = routes::handle(tx, config, routes_shutdown_rx, registry).unit_error();
     let handle_signal = async {
         let mut interrupt = signal(SignalKind::interrupt()).expect("failed to create signal");
         let mut terminate = signal(SignalKind::terminate()).expect("failed to create signal");
@@ -54,12 +58,14 @@ async fn main() {
 mod tests {
     use clap::Parser;
     use futures::{FutureExt, StreamExt};
+    use prometheus_client::registry::Registry;
     use tokio::time::{sleep, Duration};
     use warp::test::WsClient;
 
     use super::routes;
     use crate::cli::Config;
     use crate::events;
+    use crate::metrics::Metrics;
     use crate::types::{Event, EventTx};
 
     struct Client {
@@ -96,6 +102,10 @@ mod tests {
         Config::parse_from(args.split_whitespace())
     }
 
+    fn create_metrics() -> Metrics {
+        Metrics::new(&mut <Registry>::default())
+    }
+
     #[tokio::test]
     async fn socket_connect_event() {
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
@@ -114,6 +124,7 @@ mod tests {
     async fn stdio_e2e_echo() {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
         let config = create_config("scalesocket echo -- hello");
+        let metrics = create_metrics();
         let mut received_messages: Vec<String> = Vec::new();
         let mut client = Client::connect("/example", tx.clone()).await;
 
@@ -130,7 +141,7 @@ mod tests {
             tx.send(Event::Shutdown).ok();
             Ok(())
         };
-        let handle = events::handle(rx, tx.clone(), config);
+        let handle = events::handle(rx, tx.clone(), config, metrics);
 
         let _ = tokio::try_join!(handle, shutdown, inspect);
         assert_eq!(received_messages, vec!["hello"]);
