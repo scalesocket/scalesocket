@@ -4,7 +4,8 @@ use crate::{
     error::AppResult,
     process::{self, Process},
     types::{
-        ConnID, Event, EventRx, EventTx, FromProcessTx, PortID, RoomID, ShutdownTx, ToProcessTx,
+        CGIEnv, ConnID, Event, EventRx, EventTx, FromProcessTx, PortID, RoomID, ShutdownTx,
+        ToProcessTx,
     },
     utils::new_conn_id,
 };
@@ -40,13 +41,15 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<(
 
     while let Some(event) = rx.recv().await {
         match event {
-            Event::Connect { room, ws } if state.procs.contains_key(&room) => {
+            Event::Connect { room, ws, .. } if state.procs.contains_key(&room) => {
                 attach(room, ws, &tx, &mut state, None);
             }
-            Event::Connect { room, ws } => {
-                let barrier = Arc::new(Barrier::new(2));
-                let _ = spawn(&room, &tx, &mut state, Some(barrier.clone()));
-                attach(room, ws, &tx, &mut state, Some(barrier.clone()));
+            Event::Connect { room, ws, env } => {
+                let spawn_barrier = Some(Arc::new(Barrier::new(2)));
+                let attach_barrier = spawn_barrier.clone();
+
+                spawn(&room, env, &tx, &mut state, spawn_barrier).ok();
+                attach(room, ws, &tx, &mut state, attach_barrier);
             }
             Event::Disconnect { room, conn } => {
                 disconnect(room, conn, &mut state);
@@ -81,8 +84,8 @@ fn attach(
     let (proc_tx_broadcast, proc_tx, _) = state.procs.get(&room).expect("room not in process map");
     let proc_rx = proc_tx_broadcast.subscribe();
 
-    let mut on_connect = || {
-        // Successfully spawned, store connection handle in map
+    let mut on_init = || {
+        // Store connection handle in map
         let is_inserted = state
             .conns
             .entry(room.to_string())
@@ -114,8 +117,8 @@ fn attach(
     tokio::spawn(
         connection::handle(*ws, proc_rx, proc_tx.clone(), barrier)
             .then({
-                // NOTE: we invoke on_connect closure immediately...
-                on_connect();
+                // NOTE: we invoke on_init closure immediately...
+                on_init();
                 // NOTE: ...and then invoke a closure returning the async callback closure
                 on_disconnect()
             })
@@ -126,6 +129,7 @@ fn attach(
 #[instrument(name = "spawn", skip(tx, state, barrier))]
 fn spawn(
     room: &RoomID,
+    env: CGIEnv,
     tx: &EventTx,
     state: &mut State,
     barrier: Option<Arc<Barrier>>,
@@ -136,13 +140,13 @@ fn spawn(
         tracing::debug!("reserved port {}", port);
     }
 
-    let mut proc = Process::new(&state.cfg, port);
+    let mut proc = Process::new(&state.cfg, port, env);
     let proc_tx_broadcast = proc.cast_tx.clone();
     let proc_tx = proc.tx.clone();
     let kill_tx = proc.kill_tx.take().unwrap();
 
-    let on_spawn = || {
-        // Successfully spawned, store handles in map
+    let on_init = || {
+        // Store sender handles in map
         state
             .procs
             .insert(room.to_string(), (proc_tx_broadcast, proc_tx, kill_tx));
@@ -168,8 +172,8 @@ fn spawn(
                     Err(e)
                 },
                 {
-                    // NOTE: we invoke on_spawn closure immediately...
-                    on_spawn();
+                    // NOTE: we invoke on_init closure immediately...
+                    on_init();
                     // NOTE: ...and then invoke a closure returning the callback closure
                     on_kill()
                 },

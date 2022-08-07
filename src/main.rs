@@ -5,6 +5,7 @@ mod error;
 mod events;
 mod logging;
 mod process;
+mod routes;
 mod types;
 mod utils;
 
@@ -48,84 +49,12 @@ async fn main() {
     let _ = try_join!(handle_events, handle_routes, handle_signal);
 }
 
-mod routes {
-
-    use futures::FutureExt;
-
-    use crate::{
-        cli::Config,
-        types::{Event, EventTx, RoomID, ShutdownRx},
-    };
-    use {
-        serde_json::json,
-        std::path::PathBuf,
-        warp::ws::Ws,
-        warp::{self, Filter, Rejection, Reply},
-    };
-
-    pub fn handle(
-        tx: EventTx,
-        config: Config,
-        shutdown_rx: ShutdownRx,
-    ) -> impl futures::Future<Output = ()> {
-        let shutdown_rx = shutdown_rx.map(|_| ());
-
-        warp::serve(socket(tx).or(health()).or(files(config.staticdir.clone())))
-            .bind_with_graceful_shutdown(config.addr, shutdown_rx)
-            .1
-    }
-
-    pub fn socket(tx: EventTx) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-        warp::path!(String)
-            .and(warp::path::end())
-            .and(warp::ws())
-            .map(move |room: RoomID, websocket: Ws| {
-                let tx = tx.clone();
-                websocket.on_upgrade(move |ws| {
-                    let event = Event::Connect {
-                        ws: Box::new(ws),
-                        room,
-                    };
-                    tx.send(event).expect("Failed to send Connect event");
-                    async {}
-                })
-            })
-    }
-
-    pub fn health() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-        warp::path("health")
-            .and(warp::path::end())
-            .and(warp::get())
-            .map(|| warp::reply::json(&json!({"status" : "ok"})))
-    }
-
-    pub fn files(
-        path: Option<PathBuf>,
-    ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-        enable_if(path.is_some()).and(warp::fs::dir(path.unwrap_or_default()))
-    }
-
-    fn enable_if(condition: bool) -> impl Filter<Extract = (), Error = Rejection> + Copy {
-        warp::any()
-            .and_then(async move || {
-                if condition {
-                    Ok(())
-                } else {
-                    Err(warp::reject::not_found())
-                }
-            })
-            // deal with Ok(())
-            .untuple_one()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use clap::Parser;
     use futures::{FutureExt, StreamExt};
     use tokio::time::{sleep, Duration};
-    use warp::test::request;
-    use warp::{http::StatusCode, test::WsClient};
+    use warp::test::WsClient;
 
     use super::routes;
     use crate::cli::Config;
@@ -167,15 +96,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn health_returns_ok() {
-        let api = routes::health();
-
-        let resp = request().method("GET").path("/health").reply(&api).await;
-
-        assert_eq!(resp.status(), StatusCode::OK);
-    }
-
-    #[tokio::test]
     async fn socket_connect_event() {
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
         Client::connect("/example", tx).await.send("hello").await;
@@ -190,7 +110,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn socket_e2e_echo() {
+    async fn stdio_e2e_echo() {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
         let config = create_config("scalesocket echo -- hello");
         let mut received_messages: Vec<String> = Vec::new();
