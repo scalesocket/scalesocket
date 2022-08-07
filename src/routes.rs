@@ -1,4 +1,3 @@
-
 use crate::{
     cli::Config,
     types::{CGIEnv, Event, EventTx, RoomID, ShutdownRx},

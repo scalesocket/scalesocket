@@ -4,7 +4,8 @@ use crate::{
     error::AppResult,
     process::{self, Process},
     types::{
-        ConnID, Event, EventRx, EventTx, FromProcessTx, PortID, RoomID, ShutdownTx, ToProcessTx,
+        CGIEnv, ConnID, Event, EventRx, EventTx, FromProcessTx, PortID, RoomID, ShutdownTx,
+        ToProcessTx,
     },
     utils::new_conn_id,
 };
@@ -40,14 +41,14 @@ pub async fn handle(mut rx: EventRx, tx: EventTx, config: Config) -> AppResult<(
 
     while let Some(event) = rx.recv().await {
         match event {
-            Event::Connect { room, ws, env } if state.procs.contains_key(&room) => {
+            Event::Connect { room, ws, .. } if state.procs.contains_key(&room) => {
                 attach(room, ws, &tx, &mut state, None);
             }
             Event::Connect { room, ws, env } => {
                 let spawn_barrier = Some(Arc::new(Barrier::new(2)));
                 let attach_barrier = spawn_barrier.clone();
 
-                spawn(&room, &tx, &mut state, spawn_barrier).ok();
+                spawn(&room, env, &tx, &mut state, spawn_barrier).ok();
                 attach(room, ws, &tx, &mut state, attach_barrier);
             }
             Event::Disconnect { room, conn } => {
@@ -128,6 +129,7 @@ fn attach(
 #[instrument(name = "spawn", skip(tx, state, barrier))]
 fn spawn(
     room: &RoomID,
+    env: CGIEnv,
     tx: &EventTx,
     state: &mut State,
     barrier: Option<Arc<Barrier>>,
@@ -138,7 +140,7 @@ fn spawn(
         tracing::debug!("reserved port {}", port);
     }
 
-    let mut proc = Process::new(&state.cfg, port);
+    let mut proc = Process::new(&state.cfg, port, env);
     let proc_tx_broadcast = proc.cast_tx.clone();
     let proc_tx = proc.tx.clone();
     let kill_tx = proc.kill_tx.take().unwrap();

@@ -1,5 +1,6 @@
 use {
     bytes::Bytes,
+    std::collections::HashMap,
     std::net::SocketAddr,
     tokio::sync::{broadcast, mpsc, oneshot},
     tokio_stream::wrappers::UnboundedReceiverStream,
@@ -66,5 +67,14 @@ impl CGIEnv {
             query_string,
             remote_addr,
         }
+    }
+}
+
+impl From<CGIEnv> for HashMap<String, String> {
+    fn from(env: CGIEnv) -> Self {
+        HashMap::from([
+            ("QUERY_STRING".to_string(), env.query_string),
+            ("REMOTE_ADDR".to_string(), env.remote_addr),
+        ])
     }
 }

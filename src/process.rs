@@ -2,7 +2,7 @@ use crate::{
     cli::Config,
     error::{AppError, AppResult},
     types::{
-        FromProcessTx, PortID, ShutdownRx, ShutdownRxStream, ShutdownTx, ToProcessRx,
+        CGIEnv, FromProcessTx, PortID, ShutdownRx, ShutdownRxStream, ShutdownTx, ToProcessRx,
         ToProcessRxStream, ToProcessTx,
     },
     utils::{exit_code, run},
@@ -191,12 +191,12 @@ type FromProcessTxAny = Box<dyn tokio::io::AsyncWrite + Unpin + Send>;
 type FromProcessRxAny = Box<dyn futures::Stream<Item = IOResult<Bytes>> + Unpin + Send>;
 
 impl Process {
-    pub fn new(config: &Config, port: Option<PortID>) -> Self {
+    pub fn new(config: &Config, port: Option<PortID>, env: CGIEnv) -> Self {
         let (tx, rx) = mpsc::unbounded_channel::<Bytes>();
         let (cast_tx, _) = broadcast::channel(16);
         let (kill_tx, kill_rx) = oneshot::channel();
 
-        let cmd = run(&config.cmd, &config.args, port);
+        let cmd = run(&config.cmd, &config.args, port, env.into());
         let source = match &config.tcp {
             true => {
                 let addr = SocketAddrV4::new("127.0.0.1".parse().unwrap(), port.unwrap()).into();
