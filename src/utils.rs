@@ -20,7 +20,7 @@ pub fn run<I, S>(
     args: I,
     port: Option<PortID>,
     env_extra: HashMap<String, String>,
-    env_allowlist: &Vec<String>,
+    env_allowlist: &[String],
 ) -> Command
 where
     I: IntoIterator<Item = S>,

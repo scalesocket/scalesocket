@@ -7,12 +7,12 @@ pub struct Config {
     #[clap(long, default_value = "0.0.0.0:9000")]
     pub addr: SocketAddr,
 
-    /// Set scalesocket to experimental binary mode (default is line by line)
+    /// Set scalesocket to experimental binary mode
     #[clap(short, long, action)]
     pub binary: bool,
 
     /// Log JSON
-    #[clap(short, long, action)]
+    #[clap(long, action)]
     pub json: bool,
 
     /// Emit message to child on client connect (use %ID for id)
@@ -32,13 +32,13 @@ pub struct Config {
     )]
     pub passenv: Vec<String>,
 
-    /// Port range for TCP
-    #[clap(long, parse(try_from_str = parse_ports), value_name = "START:END", default_value = "9001:9999")]
-    pub tcpports: Range<u16>,
-
     /// Serve static files from directory over HTTP
     #[clap(long, value_parser, value_name = "DIR")]
     pub staticdir: Option<PathBuf>,
+
+    /// Port range for TCP
+    #[clap(long, parse(try_from_str = parse_ports), value_name = "START:END", default_value = "9001:9999")]
+    pub tcpports: Range<u16>,
 
     /// Connect to child using TCP instead of stdio
     #[clap(long, action)]

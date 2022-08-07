@@ -54,7 +54,7 @@ pub async fn handle(
 
     // await barrier to let process::handle spawn child
     let proc_ready = async {
-        match barrier.clone() {
+        match barrier {
             Some(barrier) => {
                 barrier.wait().await;
                 tracing::debug!("waited for process");
