@@ -4,6 +4,7 @@ mod connection;
 mod error;
 mod events;
 mod logging;
+mod metrics;
 mod process;
 mod routes;
 mod types;
