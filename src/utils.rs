@@ -20,18 +20,25 @@ pub fn run<I, S>(
     args: I,
     port: Option<PortID>,
     env_extra: HashMap<String, String>,
+    env_allowlist: &Vec<String>,
 ) -> Command
 where
     I: IntoIterator<Item = S>,
     S: AsRef<std::ffi::OsStr>,
 {
+    // Combine filtered environment with external variables
+    let env: HashMap<String, String> = env::vars()
+        .filter(|&(ref k, _)| env_allowlist.contains(k))
+        .chain(env_extra)
+        .collect();
+
     let mut cmd = Command::new(program);
     cmd.stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .args(args)
         .kill_on_drop(true)
         .env_clear()
-        .envs(&env_extra);
+        .envs(&env);
 
     if let Some(port) = port {
         cmd.env("PORT", port.to_string());

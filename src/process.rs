@@ -196,7 +196,7 @@ impl Process {
         let (cast_tx, _) = broadcast::channel(16);
         let (kill_tx, kill_rx) = oneshot::channel();
 
-        let cmd = run(&config.cmd, &config.args, port, env.into());
+        let cmd = run(&config.cmd, &config.args, port, env.into(), &config.passenv);
         let source = match &config.tcp {
             true => {
                 let addr = SocketAddrV4::new("127.0.0.1".parse().unwrap(), port.unwrap()).into();
@@ -223,11 +223,11 @@ mod tests {
     use clap::Parser;
 
     use super::{handle, spawn, Message, Process};
-    use crate::cli::Config;
+    use crate::{cli::Config, types::CGIEnv};
 
     fn create_process(args: &'static str) -> Process {
         let config = Config::parse_from(args.split_whitespace());
-        Process::new(&config, None)
+        Process::new(&config, None, CGIEnv::default())
     }
 
     #[tokio::test]

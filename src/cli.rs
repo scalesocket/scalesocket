@@ -23,6 +23,15 @@ pub struct Config {
     #[clap(long, value_name = "MSG")]
     pub leavemsg: Option<String>,
 
+    /// List of envvars to pass to child
+    #[clap(
+        long,
+        value_name = "LIST",
+        value_delimiter = ',',
+        default_value = "PATH,DYLD_LIBRARY_PATH"
+    )]
+    pub passenv: Vec<String>,
+
     /// Port range for TCP
     #[clap(long, parse(try_from_str = parse_ports), value_name = "START:END", default_value = "9001:9999")]
     pub tcpports: Range<u16>,
