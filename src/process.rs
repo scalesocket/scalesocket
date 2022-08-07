@@ -221,6 +221,8 @@ impl Process {
 mod tests {
 
     use clap::Parser;
+    use futures::StreamExt;
+    use tokio_stream::wrappers::BroadcastStream;
 
     use super::{handle, spawn, Message, Process};
     use crate::{cli::Config, types::CGIEnv};
@@ -238,6 +240,27 @@ mod tests {
         let mut child = proc.child.take().unwrap();
 
         assert_eq!(child.wait().await.ok().unwrap().code(), Some(0));
+    }
+
+    #[tokio::test]
+    async fn test_spawn_passes_cgi_env() {
+        let process = create_process("scalesocket --passenv= printenv");
+        let proc_rx = process.cast_tx.subscribe();
+
+        handle(process, None).await.ok();
+        let output = BroadcastStream::new(proc_rx)
+            .filter_map(|d| async { d.ok() })
+            .take(2)
+            .collect::<Vec<_>>()
+            .await;
+
+        assert_eq!(
+            output,
+            vec![
+                Message::text("QUERY_STRING="),
+                Message::text("REMOTE_ADDR=")
+            ]
+        );
     }
 
     #[tokio::test]
