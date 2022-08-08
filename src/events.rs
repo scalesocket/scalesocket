@@ -38,12 +38,7 @@ pub async fn handle(
     config: Config,
     metrics: Metrics,
 ) -> AppResult<()> {
-    let mut state = State {
-        conns: HashMap::new(),
-        procs: HashMap::new(),
-        ports: PortPool::new_ranged(config.tcpports.clone()),
-        cfg: config,
-    };
+    let mut state = State::new(config);
 
     while let Some(event) = rx.recv().await {
         match event {
@@ -73,6 +68,17 @@ pub async fn handle(
         }
     }
     Ok(())
+}
+
+impl State {
+    pub fn new(cfg: Config) -> Self {
+        Self {
+            conns: HashMap::new(),
+            procs: HashMap::new(),
+            ports: PortPool::new_ranged(cfg.tcpports.clone()),
+            cfg,
+        }
+    }
 }
 
 #[instrument(name = "attach", skip(ws, tx, state, barrier))]
