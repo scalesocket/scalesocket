@@ -67,11 +67,7 @@ pub async fn handle(
                 exit(room, code, port, &mut state);
             }
             Event::Shutdown => {
-                tracing::debug!("killing processes");
-                let procs = state.procs.into_values();
-                for (_, _, kill_tx) in procs {
-                    let _ = kill_tx.send(());
-                }
+                shutdown(state);
                 break;
             }
         }
@@ -233,6 +229,16 @@ fn exit(room: RoomID, code: Option<i32>, port: Option<PortID>, state: &mut State
     if state.procs.contains_key(&room) {
         tracing::error! { room, code, "process exited" };
         // TODO inform clients
+    }
+}
+
+#[instrument(name = "shutdown", skip_all)]
+fn shutdown(state: State) {
+    tracing::debug!("killing processes");
+
+    let procs = state.procs.into_values();
+    for (_, _, kill_tx) in procs {
+        let _ = kill_tx.send(());
     }
 }
 
