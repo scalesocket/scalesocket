@@ -13,11 +13,7 @@ mod utils;
 use crate::{cli::Config, logging::setup_logging, metrics::Metrics, types::Event};
 
 use {
-    clap::Parser,
-    futures::FutureExt,
-    prometheus_client::registry::Registry,
-    tokio::signal::unix::{signal, SignalKind},
-    tokio::sync,
+    clap::Parser, futures::FutureExt, prometheus_client::registry::Registry, tokio::sync,
     tokio::try_join,
 };
 
@@ -38,7 +34,17 @@ async fn main() {
 
     let handle_events = events::handle(rx, tx.clone(), config.clone(), metrics).unit_error();
     let handle_routes = routes::handle(tx, config, routes_shutdown_rx, registry).unit_error();
-    let handle_signal = async {
+    let handle_signal = signal::handle(routes_shutdown_tx, events_shutdown_tx).unit_error();
+
+    let _ = try_join!(handle_events, handle_routes, handle_signal);
+}
+
+mod signal {
+    use crate::types::{Event, EventTx, ShutdownTx};
+    use futures::FutureExt;
+    use tokio::signal::unix::{signal, SignalKind};
+
+    pub async fn handle(routes_shutdown_tx: ShutdownTx, events_shutdown_tx: EventTx) -> () {
         let mut interrupt = signal(SignalKind::interrupt()).expect("failed to create signal");
         let mut terminate = signal(SignalKind::terminate()).expect("failed to create signal");
         let signals = futures::future::select(interrupt.recv().boxed(), terminate.recv().boxed());
@@ -46,12 +52,9 @@ async fn main() {
         signals.await;
 
         tracing::info! { "received signal, shutting down" };
-        routes_shutdown_tx.send(()).ok();
-        events_shutdown_tx.send(Event::Shutdown).ok();
+        let _ = routes_shutdown_tx.send(());
+        let _ = events_shutdown_tx.send(Event::Shutdown);
     }
-    .unit_error();
-
-    let _ = try_join!(handle_events, handle_routes, handle_signal);
 }
 
 #[cfg(test)]
