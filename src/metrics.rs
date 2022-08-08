@@ -39,7 +39,7 @@ impl Metrics {
         }
     }
 
-    pub fn inc_ws_connections(&self, room: &RoomID) {
+    pub fn inc_ws_connections(&self, room: &str) {
         self.ws_connections_counter
             .get_or_create(&Labels {
                 room: room.to_string(),
@@ -52,11 +52,11 @@ impl Metrics {
             .inc();
     }
 
-    pub fn dec_ws_connections(&self, room: &RoomID) {
+    pub fn dec_ws_connections(&self, room: &str) {
         self.ws_connections_open_gauge
             .get_or_create(&Labels {
                 room: room.to_string(),
             })
-            .inc();
+            .dec();
     }
 }
