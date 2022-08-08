@@ -50,6 +50,18 @@ pub fn exit_code<T>(status: Result<ExitStatus, T>) -> Option<i32> {
     status.ok().and_then(|s| s.code()).or(None)
 }
 
+pub fn replace_template(
+    template: String,
+    replace_values: HashMap<String, String>,
+    prefix: &str,
+) -> String {
+    let mut result = template;
+    for (key, value) in replace_values {
+        result = result.replace(&[prefix, &key].concat(), &value);
+    }
+    result
+}
+
 // utility filters for warp
 pub mod warpext {
     use crate::types::{CGIEnv, Env};

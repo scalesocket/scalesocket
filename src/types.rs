@@ -54,6 +54,21 @@ pub struct Env {
     pub query: HashMap<String, String>,
 }
 
+impl From<Env> for HashMap<String, String> {
+    /// Performs conversion and turns query keys to uppercase
+    fn from(env: Env) -> Self {
+        let mut result: HashMap<String, String> = env.cgi.into();
+        let query_uppercase: HashMap<String, String> = env
+            .query
+            .into_iter()
+            .map(|(k, v)| (k.to_uppercase(), v))
+            .collect();
+
+        result.extend(query_uppercase);
+        result
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct CGIEnv {
     /// URL-encoded search or parameter string

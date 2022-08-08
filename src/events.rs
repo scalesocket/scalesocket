@@ -8,7 +8,7 @@ use crate::{
         ConnID, Env, Event, EventRx, EventTx, FromProcessTx, PortID, RoomID, ShutdownTx,
         ToProcessTx,
     },
-    utils::new_conn_id,
+    utils::{new_conn_id, replace_template},
 };
 
 use {
@@ -109,7 +109,8 @@ fn attach(
 
             // Inform child
             if let Some(ref join_msg_template) = state.cfg.joinmsg {
-                let join_msg = join_msg_template.replace("%ID", &conn.to_string());
+                let template = join_msg_template.replace("%ID", &conn.to_string());
+                let join_msg = replace_template(template, env.into(), "%");
                 let _ = proc_tx.send(join_msg.into());
             }
         }
