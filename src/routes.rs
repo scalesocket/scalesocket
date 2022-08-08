@@ -1,5 +1,6 @@
 use crate::{
     cli::Config,
+    metrics::Metrics,
     types::{CGIEnv, Event, EventTx, RoomID, ShutdownRx},
     utils::warpext,
 };
@@ -18,6 +19,7 @@ pub fn handle(
     tx: EventTx,
     config: Config,
     shutdown_rx: ShutdownRx,
+    metrics: Metrics,
     registry: Option<Registry>,
 ) -> impl futures::Future<Output = ()> {
     let shutdown_rx = shutdown_rx.map(|_| ());
@@ -25,7 +27,8 @@ pub fn handle(
     warp::serve(
         socket(tx)
             .or(health())
-            .or(metrics(registry))
+            .or(openmetrics(registry, config.metrics))
+            .or(stats(metrics, config.stats))
             .or(files(config.staticdir.clone())),
     )
     .bind_with_graceful_shutdown(config.addr, shutdown_rx)
@@ -58,11 +61,13 @@ pub fn health() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone 
         .map(|| warp::reply::json(&json!({"status" : "ok"})))
 }
 
-pub fn metrics(
+pub fn openmetrics(
     registry: Option<Registry>,
+    enabled: bool,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     let registry = std::sync::Arc::new(registry);
-    warpext::enable_if(registry.is_some())
+
+    warpext::enable_if(enabled)
         .and(warp::path("metrics"))
         .and(warp::path::end())
         .and(warp::get())
@@ -88,6 +93,17 @@ pub fn metrics(
                 Some(data) => builder.body(data),
                 None => builder.status(500).body(String::default()),
             }
+        })
+}
+
+pub fn stats(
+    metrics: Metrics,
+    enabled: bool,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warpext::enable_if(enabled)
+        .and(warp::path!(String / "stats").and(warp::path::end()))
+        .map(move |room: RoomID| {
+            warp::reply::json(&metrics.get_room(room))
         })
 }
 
@@ -124,7 +140,7 @@ mod tests {
             "Example description",
             Box::new(Family::<(), Counter>::default()),
         );
-        let api = metrics(Some(registry));
+        let api = openmetrics(Some(registry), true);
 
         let resp = request().method("GET").path("/metrics").reply(&api).await;
 
@@ -133,5 +149,19 @@ mod tests {
             resp.body(),
             "# HELP example_metric Example description.\n# TYPE example_metric counter\n# EOF\n"
         );
+    }
+
+    #[tokio::test]
+    async fn stats_returns_stats() {
+        let metrics = Metrics::new(&mut None);
+        metrics.inc_ws_connections("foo");
+        metrics.inc_ws_connections("bar");
+
+        let api = stats(metrics, true);
+
+        let resp = request().method("GET").path("/foo/stats").reply(&api).await;
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(resp.body(), "{\"connections\":1}");
     }
 }

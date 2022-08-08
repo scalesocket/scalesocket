@@ -10,6 +10,7 @@ pub struct Labels {
     room: RoomID,
 }
 
+#[derive(Clone)]
 pub struct Metrics {
     pub ws_connections_counter: Family<Labels, Counter>,
     pub ws_connections_open_gauge: Family<Labels, Gauge>,
@@ -39,7 +40,7 @@ impl Metrics {
         }
     }
 
-    pub fn inc_ws_connections(&self, room: &RoomID) {
+    pub fn inc_ws_connections(&self, room: &str) {
         self.ws_connections_counter
             .get_or_create(&Labels {
                 room: room.to_string(),
@@ -52,11 +53,22 @@ impl Metrics {
             .inc();
     }
 
-    pub fn dec_ws_connections(&self, room: &RoomID) {
+    pub fn dec_ws_connections(&self, room: &str) {
         self.ws_connections_open_gauge
             .get_or_create(&Labels {
                 room: room.to_string(),
             })
-            .inc();
+            .dec();
+    }
+
+    pub fn get_room(&self, room: RoomID) -> serde_json::Value {
+        let connections = self
+            .ws_connections_open_gauge
+            .get_or_create(&Labels {
+                room: room.to_string(),
+            })
+            .get();
+
+        serde_json::json!({"connections" : connections})
     }
 }
