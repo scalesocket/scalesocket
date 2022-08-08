@@ -21,6 +21,7 @@ pub enum Event {
     Disconnect {
         room: RoomID,
         conn: ConnID,
+        env: Env,
     },
     ProcessExit {
         room: RoomID,

@@ -54,9 +54,9 @@ pub async fn handle(
                 spawn(&room, &env, &tx, &mut state, spawn_barrier).ok();
                 attach(room, env, ws, &tx, &mut state, attach_barrier);
             }
-            Event::Disconnect { room, conn } => {
+            Event::Disconnect { room, conn, env } => {
                 metrics.dec_ws_connections(&room);
-                disconnect(room, conn, &mut state);
+                disconnect(room, env, conn, &mut state);
             }
             Event::ProcessExit { room, code, port } => {
                 exit(room, code, port, &mut state);
@@ -81,7 +81,7 @@ impl State {
     }
 }
 
-#[instrument(name = "attach", skip(ws, tx, state, barrier))]
+#[instrument(name = "attach", skip(env, ws, tx, state, barrier))]
 fn attach(
     room: RoomID,
     env: Env,
@@ -110,7 +110,7 @@ fn attach(
             // Inform child
             if let Some(ref join_msg_template) = state.cfg.joinmsg {
                 let template = join_msg_template.replace("%ID", &conn.to_string());
-                let join_msg = replace_template(template, env.into(), "%");
+                let join_msg = replace_template(template, env.clone().into(), "%");
                 let _ = proc_tx.send(join_msg.into());
             }
         }
@@ -119,11 +119,12 @@ fn attach(
     let on_disconnect = || {
         let tx = tx.clone();
         let room = room.clone();
+        let env = env.clone();
 
         // Return callback for connection::handle
         async move |_| {
             tracing::debug! { id=conn, "client disconnecting" };
-            let _ = tx.send(Event::Disconnect { room, conn });
+            let _ = tx.send(Event::Disconnect { room, conn, env });
         }
     };
 
@@ -139,7 +140,7 @@ fn attach(
     );
 }
 
-#[instrument(name = "spawn", skip(tx, state, barrier))]
+#[instrument(name = "spawn", skip(env, tx, state, barrier))]
 fn spawn(
     room: &RoomID,
     env: &Env,
@@ -197,8 +198,8 @@ fn spawn(
     Ok(())
 }
 
-#[instrument(name = "disconnect", skip(conn, state))]
-fn disconnect(room: RoomID, conn: ConnID, state: &mut State) {
+#[instrument(name = "disconnect", skip(env, conn, state))]
+fn disconnect(room: RoomID, env: Env, conn: ConnID, state: &mut State) {
     let room_conns = state.conns.entry(room.clone()).or_default();
 
     // Get process handles from map
@@ -212,7 +213,8 @@ fn disconnect(room: RoomID, conn: ConnID, state: &mut State) {
 
         // Inform child
         if let Some(ref leave_msg_template) = state.cfg.leavemsg {
-            let leave_msg = leave_msg_template.replace("%ID", &conn.to_string());
+            let template = leave_msg_template.replace("%ID", &conn.to_string());
+            let leave_msg = replace_template(template, env.into(), "%");
             let _ = proc_tx.send(leave_msg.into());
         }
     }
