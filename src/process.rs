@@ -12,14 +12,12 @@ use {
     futures::TryStreamExt,
     futures::{FutureExt, StreamExt},
     std::io::Result as IOResult,
-    std::net::SocketAddr,
-    std::net::SocketAddrV4,
+    std::net::{SocketAddr, SocketAddrV4},
     std::sync::Arc,
     tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     tokio::net::TcpStream,
     tokio::process::{Child, Command},
-    tokio::sync::Barrier,
-    tokio::sync::{broadcast, mpsc, oneshot},
+    tokio::sync::{broadcast, mpsc, oneshot, Barrier},
     tokio::time::{sleep, Duration},
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
     tokio_util::codec::{BytesCodec, FramedRead},
@@ -81,12 +79,21 @@ pub async fn handle(mut process: Process, barrier: Option<Arc<Barrier>>) -> AppR
 async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
     let kill_rx = process.kill_rx.take().unwrap().into_stream();
     let sock_rx = UnboundedReceiverStream::new(process.rx.take().unwrap());
+
+    let spawn_child = |mut cmd: Command| {
+        cmd.spawn()
+            .map_err(|e| AppError::ProcessSpawnError(e.to_string()))
+    };
+
     match process.source.take().unwrap() {
-        Source::Stdio(mut cmd) => {
-            let mut child = cmd
-                .spawn()
-                .map_err(|e| AppError::ProcessSpawnError(e.to_string()))?;
-            tracing::debug!("spawned childprocess");
+        Source::Stdio(cmd) => {
+            let mut child = spawn_child(cmd)?;
+
+            if let Some(pid) = child.id() {
+                tracing::debug!("spawned childprocess with pid {}", pid);
+            } else {
+                tracing::debug!("spawned childprocess with unknown pid");
+            }
 
             let stdin = child
                 .stdin
@@ -120,8 +127,8 @@ async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
                 kill_rx,
             })
         }
-        Source::Tcp(mut cmd, addr) => {
-            let child = cmd.spawn()?;
+        Source::Tcp(cmd, addr) => {
+            let child = spawn_child(cmd)?;
             sleep(Duration::from_secs(1)).await;
 
             let stream = match TcpStream::connect(addr).await {
