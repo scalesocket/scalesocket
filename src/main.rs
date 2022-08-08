@@ -28,12 +28,12 @@ async fn main() {
     let events_shutdown_tx = tx.clone();
 
     let mut registry = config.metrics.then_some(<Registry>::default());
-    let metrics = Metrics::new(&mut registry);
+    let mtr = Metrics::new(&mut registry);
 
     tracing::info! { "listening at {}", config.addr };
 
-    let handle_events = events::handle(rx, tx.clone(), config.clone(), metrics).unit_error();
-    let handle_routes = routes::handle(tx, config, routes_shutdown_rx, registry).unit_error();
+    let handle_events = events::handle(rx, tx.clone(), config.clone(), mtr.clone()).unit_error();
+    let handle_routes = routes::handle(tx, config, routes_shutdown_rx, mtr, registry).unit_error();
     let handle_signal = signal::handle(routes_shutdown_tx, events_shutdown_tx).unit_error();
 
     let _ = try_join!(handle_events, handle_routes, handle_signal);

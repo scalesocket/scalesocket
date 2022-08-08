@@ -40,6 +40,10 @@ pub struct Config {
     #[clap(long, value_parser, value_name = "DIR")]
     pub staticdir: Option<PathBuf>,
 
+    /// Expose stats endpoint at /<ROOM>/stats
+    #[clap(long, action)]
+    pub stats: bool,
+
     /// Port range for TCP
     #[clap(long, parse(try_from_str = parse_ports), value_name = "START:END", default_value = "9001:9999")]
     pub tcpports: Range<u16>,

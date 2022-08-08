@@ -1,5 +1,6 @@
 use crate::{
     cli::Config,
+    metrics::Metrics,
     types::{CGIEnv, Event, EventTx, RoomID, ShutdownRx},
     utils::warpext,
 };
@@ -18,6 +19,7 @@ pub fn handle(
     tx: EventTx,
     config: Config,
     shutdown_rx: ShutdownRx,
+    metrics: Metrics,
     registry: Option<Registry>,
 ) -> impl futures::Future<Output = ()> {
     let shutdown_rx = shutdown_rx.map(|_| ());
@@ -26,6 +28,7 @@ pub fn handle(
         socket(tx)
             .or(health())
             .or(openmetrics(registry, config.metrics))
+            .or(stats(metrics, config.stats))
             .or(files(config.staticdir.clone())),
     )
     .bind_with_graceful_shutdown(config.addr, shutdown_rx)
@@ -93,6 +96,17 @@ pub fn openmetrics(
         })
 }
 
+pub fn stats(
+    metrics: Metrics,
+    enabled: bool,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warpext::enable_if(enabled)
+        .and(warp::path!(String / "stats").and(warp::path::end()))
+        .map(move |room: RoomID| {
+            warp::reply::json(&metrics.get_room(room))
+        })
+}
+
 pub fn files(
     path: Option<PathBuf>,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
@@ -135,5 +149,19 @@ mod tests {
             resp.body(),
             "# HELP example_metric Example description.\n# TYPE example_metric counter\n# EOF\n"
         );
+    }
+
+    #[tokio::test]
+    async fn stats_returns_stats() {
+        let metrics = Metrics::new(&mut None);
+        metrics.inc_ws_connections("foo");
+        metrics.inc_ws_connections("bar");
+
+        let api = stats(metrics, true);
+
+        let resp = request().method("GET").path("/foo/stats").reply(&api).await;
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(resp.body(), "{\"connections\":1}");
     }
 }
