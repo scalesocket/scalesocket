@@ -25,7 +25,7 @@ pub fn handle(
     warp::serve(
         socket(tx)
             .or(health())
-            .or(metrics(registry))
+            .or(openmetrics(registry, config.metrics))
             .or(files(config.staticdir.clone())),
     )
     .bind_with_graceful_shutdown(config.addr, shutdown_rx)
@@ -58,11 +58,13 @@ pub fn health() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone 
         .map(|| warp::reply::json(&json!({"status" : "ok"})))
 }
 
-pub fn metrics(
+pub fn openmetrics(
     registry: Option<Registry>,
+    enabled: bool,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     let registry = std::sync::Arc::new(registry);
-    warpext::enable_if(registry.is_some())
+
+    warpext::enable_if(enabled)
         .and(warp::path("metrics"))
         .and(warp::path::end())
         .and(warp::get())
@@ -124,7 +126,7 @@ mod tests {
             "Example description",
             Box::new(Family::<(), Counter>::default()),
         );
-        let api = metrics(Some(registry));
+        let api = openmetrics(Some(registry), true);
 
         let resp = request().method("GET").path("/metrics").reply(&api).await;
 
