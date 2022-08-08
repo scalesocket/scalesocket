@@ -1,7 +1,7 @@
 use crate::{
     cli::Config,
     metrics::Metrics,
-    types::{CGIEnv, Event, EventTx, RoomID, ShutdownRx},
+    types::{Env, Event, EventTx, RoomID, ShutdownRx},
     utils::warpext,
 };
 
@@ -39,8 +39,8 @@ pub fn socket(tx: EventTx) -> impl Filter<Extract = impl Reply, Error = Rejectio
     warp::path!(String)
         .and(warp::path::end())
         .and(warp::ws())
-        .and(warpext::cgi_env())
-        .map(move |room: RoomID, websocket: Ws, env: CGIEnv| {
+        .and(warpext::env())
+        .map(move |room: RoomID, websocket: Ws, env: Env| {
             let tx = tx.clone();
             websocket.on_upgrade(move |ws| {
                 let event = Event::Connect {
@@ -102,9 +102,7 @@ pub fn stats(
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     warpext::enable_if(enabled)
         .and(warp::path!(String / "stats").and(warp::path::end()))
-        .map(move |room: RoomID| {
-            warp::reply::json(&metrics.get_room(room))
-        })
+        .map(move |room: RoomID| warp::reply::json(&metrics.get_room(room)))
 }
 
 pub fn files(

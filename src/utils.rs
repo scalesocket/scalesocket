@@ -52,7 +52,8 @@ pub fn exit_code<T>(status: Result<ExitStatus, T>) -> Option<i32> {
 
 // utility filters for warp
 pub mod warpext {
-    use crate::types::CGIEnv;
+    use crate::types::{CGIEnv, Env};
+    use std::collections::HashMap;
     use warp::{self, Filter, Rejection};
 
     pub type One<T> = (T,);
@@ -66,6 +67,15 @@ pub mod warpext {
                     Err(warp::reject::not_found())
                 }
             })
+            // deal with Ok(())
+            .untuple_one()
+    }
+
+    pub fn env() -> impl Filter<Extract = One<Env>, Error = Rejection> + Copy {
+        warp::any()
+            .and(cgi_env())
+            .and(warp::query::<HashMap<String, String>>())
+            .and_then(async move |cgi, query| Ok::<_, Rejection>((Env { cgi, query },)))
             // deal with Ok(())
             .untuple_one()
     }

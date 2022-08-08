@@ -16,7 +16,7 @@ pub enum Event {
     Connect {
         room: RoomID,
         ws: Box<WebSocket>,
-        env: CGIEnv,
+        env: Env,
     },
     Disconnect {
         room: RoomID,
@@ -48,7 +48,13 @@ pub type ShutdownRxStream = futures::future::IntoStream<ShutdownRx>;
 pub type FromProcessTx = broadcast::Sender<Message>;
 pub type FromProcessRx = broadcast::Receiver<Message>;
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
+pub struct Env {
+    pub cgi: CGIEnv,
+    pub query: HashMap<String, String>,
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct CGIEnv {
     /// URL-encoded search or parameter string
     query_string: String,
