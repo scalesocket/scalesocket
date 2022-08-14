@@ -1,8 +1,9 @@
 use crate::{
     cli::Config,
+    envvars::CGIEnv,
     error::{AppError, AppResult},
     types::{
-        CGIEnv, FromProcessTx, PortID, ShutdownRx, ShutdownRxStream, ShutdownTx, ToProcessRx,
+        FromProcessTx, PortID, ShutdownRx, ShutdownRxStream, ShutdownTx, ToProcessRx,
         ToProcessRxStream, ToProcessTx,
     },
     utils::{exit_code, run},
@@ -232,7 +233,7 @@ mod tests {
     use tokio_stream::wrappers::BroadcastStream;
 
     use super::{handle, spawn, Message, Process};
-    use crate::{cli::Config, types::CGIEnv};
+    use crate::{cli::Config, envvars::CGIEnv};
 
     fn create_process(args: &'static str) -> Process {
         let config = Config::parse_from(args.split_whitespace());

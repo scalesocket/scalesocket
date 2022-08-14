@@ -1,13 +1,12 @@
 use crate::{
     cli::Config,
     connection,
+    envvars::{replace_template_env, Env},
     error::AppResult,
-    envvars::replace_template_env,
     metrics::Metrics,
     process::{self, Process},
     types::{
-        ConnID, Env, Event, EventRx, EventTx, FromProcessTx, PortID, RoomID, ShutdownTx,
-        ToProcessTx,
+        ConnID, Event, EventRx, EventTx, FromProcessTx, PortID, RoomID, ShutdownTx, ToProcessTx,
     },
     utils::new_conn_id,
 };

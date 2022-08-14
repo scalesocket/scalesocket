@@ -51,7 +51,7 @@ pub fn exit_code<T>(status: Result<ExitStatus, T>) -> Option<i32> {
 
 // utility filters for warp
 pub mod warpext {
-    use crate::types::{CGIEnv, Env};
+    use crate::envvars::{CGIEnv, Env};
     use std::collections::HashMap;
     use warp::{self, Filter, Rejection};
 

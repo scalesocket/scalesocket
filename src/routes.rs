@@ -1,7 +1,8 @@
 use crate::{
     cli::Config,
+    envvars::Env,
     metrics::Metrics,
-    types::{Env, Event, EventTx, RoomID, ShutdownRx},
+    types::{Event, EventTx, RoomID, ShutdownRx},
     utils::warpext,
 };
 

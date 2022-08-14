@@ -1,5 +1,57 @@
-use crate::types::Env;
-use {std::collections::HashMap, urlencoding::encode};
+use {std::collections::HashMap, std::net::SocketAddr, urlencoding::encode};
+
+#[derive(Clone, Debug, Default)]
+pub struct Env {
+    pub cgi: CGIEnv,
+    pub query: HashMap<String, String>,
+}
+
+impl From<Env> for HashMap<String, String> {
+    /// Performs conversion and turns query keys to uppercase
+    fn from(env: Env) -> Self {
+        let mut result: HashMap<String, String> = env.cgi.into();
+        let query_uppercase: HashMap<String, String> = env
+            .query
+            .into_iter()
+            .map(|(k, v)| (k.to_uppercase(), v))
+            .collect();
+
+        result.extend(query_uppercase);
+        result
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct CGIEnv {
+    /// URL-encoded search or parameter string
+    query_string: String,
+    /// network address of the client sending the request
+    remote_addr: String,
+}
+
+impl CGIEnv {
+    pub fn from_filter(query_string: Option<String>, remote_addr: Option<SocketAddr>) -> Self {
+        let query_string = query_string.unwrap_or_default();
+        let remote_addr = remote_addr
+            .map(|a| a.to_string())
+            .unwrap_or_else(|| "".to_string());
+
+        Self {
+            query_string,
+            remote_addr,
+        }
+    }
+}
+
+impl From<CGIEnv> for HashMap<String, String> {
+    fn from(env: CGIEnv) -> Self {
+        HashMap::from([
+            // NOTE: implicit uppercase
+            ("QUERY_STRING".to_string(), env.query_string),
+            ("REMOTE_ADDR".to_string(), env.remote_addr),
+        ])
+    }
+}
 
 pub fn replace_template_env(template: &str, conn: usize, env: &Env) -> String {
     let template = template.replace("#ID", &conn.to_string());
@@ -46,9 +98,7 @@ mod tests {
 
     use std::collections::HashMap;
 
-    use crate::types::{CGIEnv, Env};
-
-    use super::replace_template_env;
+    use super::{replace_template_env, CGIEnv, Env};
 
     fn create_query() -> HashMap<String, String> {
         HashMap::from([("foo".to_string(), "bar baz".to_string())])
