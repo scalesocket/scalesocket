@@ -1,9 +1,9 @@
 #![feature(async_closure, bool_to_option)]
 mod cli;
 mod connection;
+mod envvars;
 mod error;
 mod events;
-mod events_utils;
 mod logging;
 mod metrics;
 mod process;

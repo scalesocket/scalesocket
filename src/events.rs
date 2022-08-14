@@ -2,7 +2,7 @@ use crate::{
     cli::Config,
     connection,
     error::AppResult,
-    events_utils::replace_template_env,
+    envvars::replace_template_env,
     metrics::Metrics,
     process::{self, Process},
     types::{
