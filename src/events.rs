@@ -255,21 +255,105 @@ fn shutdown(state: State) {
 mod tests {
 
     use crate::cli::Config;
+    use bytes::Bytes;
     use clap::Parser;
     use std::collections::{HashMap, HashSet};
-    use tokio::sync::{broadcast, mpsc, oneshot};
+    use tokio::sync::{
+        self, broadcast,
+        mpsc::{self, UnboundedReceiver},
+        oneshot,
+    };
+    use warp::Filter;
 
-    use super::{disconnect, FromProcessTx, PortPool, ShutdownTx, State, ToProcessTx};
+    use super::{
+        attach, disconnect, Env, Event, FromProcessTx, PortPool, ShutdownTx, State, ToProcessTx,
+    };
 
     fn create_config(args: &'static str) -> Config {
         Config::parse_from(args.split_whitespace())
     }
 
     fn create_process_handle() -> (FromProcessTx, ToProcessTx, ShutdownTx) {
-        let (tx, _) = mpsc::unbounded_channel();
+        create_process().1
+    }
+
+    fn create_process() -> (
+        UnboundedReceiver<Bytes>,
+        (FromProcessTx, ToProcessTx, ShutdownTx),
+    ) {
+        let (tx, rx) = mpsc::unbounded_channel();
         let (broadcast_tx, _) = broadcast::channel(16);
         let (kill_tx, _) = oneshot::channel();
-        (broadcast_tx, tx, kill_tx)
+        (rx, (broadcast_tx, tx, kill_tx))
+    }
+
+    async fn create_ws() -> warp::ws::WebSocket {
+        // Use channel to move Websocket out of closure (but could use Arc<Mutex>>)
+        let (tx, mut rx) = sync::mpsc::unbounded_channel();
+
+        // Dummy route that completes after hanshake
+        let route = warp::ws().map(move |websocket: warp::ws::Ws| {
+            let tx = tx.clone();
+            websocket.on_upgrade(move |ws| {
+                tx.send(ws).ok();
+                futures::future::ready(())
+            })
+        });
+
+        let _ = warp::test::ws().handshake(route).await.expect("handshake");
+        let ws = rx.recv().await.unwrap();
+
+        ws
+    }
+
+    #[tokio::test]
+    async fn test_attach() {
+        let (mut rx, handle) = create_process();
+        let mut state = State {
+            conns: HashMap::new(),
+            procs: HashMap::from([("room1".to_string(), handle)]),
+            cfg: create_config("scalesocket cat --joinmsg=foo"),
+            ports: PortPool::new(),
+        };
+        let (tx, _) = sync::mpsc::unbounded_channel::<Event>();
+        let ws = create_ws().await;
+
+        attach(
+            "room1".to_string(),
+            Env::default(),
+            Box::new(ws),
+            &tx,
+            &mut state,
+            None,
+        );
+
+        let _ = rx.recv().await;
+    }
+
+    #[tokio::test]
+    async fn test_attach_sends_joinmsg() {
+        let (mut rx, handle) = create_process();
+        let mut state = State {
+            conns: HashMap::new(),
+            procs: HashMap::from([("room1".to_string(), handle)]),
+            cfg: create_config("scalesocket cat --joinmsg=foo"),
+            ports: PortPool::new(),
+        };
+        let (tx, _) = sync::mpsc::unbounded_channel::<Event>();
+        let ws = create_ws().await;
+
+        attach(
+            "room1".to_string(),
+            Env::default(),
+            Box::new(ws),
+            &tx,
+            &mut state,
+            None,
+        );
+
+        let received_event = rx.recv().await.unwrap();
+        let received_msg = std::str::from_utf8(&received_event).unwrap();
+        assert_eq!("foo", received_msg);
     }
 
     #[tokio::test]
@@ -284,7 +368,7 @@ mod tests {
             ports: PortPool::new(),
         };
 
-        disconnect("room1".to_string(), 1, &mut state);
+        disconnect("room1".to_string(), Env::default(), 1, &mut state);
 
         assert!(state.conns.get("room1").unwrap().is_empty());
         assert!(!state.conns.get("room2").unwrap().is_empty());
