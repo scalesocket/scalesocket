@@ -95,6 +95,7 @@ impl CGIEnv {
 impl From<CGIEnv> for HashMap<String, String> {
     fn from(env: CGIEnv) -> Self {
         HashMap::from([
+            // NOTE: implicit uppercase
             ("QUERY_STRING".to_string(), env.query_string),
             ("REMOTE_ADDR".to_string(), env.remote_addr),
         ])

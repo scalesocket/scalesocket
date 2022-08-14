@@ -64,11 +64,9 @@ impl Metrics {
     pub fn get_room(&self, room: RoomID) -> serde_json::Value {
         let connections = self
             .ws_connections_open_gauge
-            .get_or_create(&Labels {
-                room: room.to_string(),
-            })
+            .get_or_create(&Labels { room })
             .get();
 
-        serde_json::json!({"connections" : connections})
+        serde_json::json!({ "connections": connections })
     }
 }

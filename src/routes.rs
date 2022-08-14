@@ -75,7 +75,7 @@ pub fn openmetrics(
             // Encode metrics
             let mut buffer = Vec::new();
             let res = match *registry {
-                Some(ref registry) => encode(&mut buffer, &registry),
+                Some(ref registry) => encode(&mut buffer, registry),
                 // Unreachable, since registry.is_some()
                 None => unreachable!(),
             };
