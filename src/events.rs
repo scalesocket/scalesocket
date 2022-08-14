@@ -2,13 +2,14 @@ use crate::{
     cli::Config,
     connection,
     error::AppResult,
+    events_utils::replace_template_env,
     metrics::Metrics,
     process::{self, Process},
     types::{
         ConnID, Env, Event, EventRx, EventTx, FromProcessTx, PortID, RoomID, ShutdownTx,
         ToProcessTx,
     },
-    utils::{new_conn_id, replace_template},
+    utils::new_conn_id,
 };
 
 use {
@@ -109,8 +110,7 @@ fn attach(
 
             // Inform child
             if let Some(ref join_msg_template) = state.cfg.joinmsg {
-                let template = join_msg_template.replace("%ID", &conn.to_string());
-                let join_msg = replace_template(template, env.clone().into(), "%");
+                let join_msg = replace_template_env(join_msg_template, conn, &env);
                 let _ = proc_tx.send(join_msg.into());
             }
         }
@@ -213,8 +213,7 @@ fn disconnect(room: RoomID, env: Env, conn: ConnID, state: &mut State) {
 
         // Inform child
         if let Some(ref leave_msg_template) = state.cfg.leavemsg {
-            let template = leave_msg_template.replace("%ID", &conn.to_string());
-            let leave_msg = replace_template(template, env.into(), "%");
+            let leave_msg = replace_template_env(leave_msg_template, conn, &env);
             let _ = proc_tx.send(leave_msg.into());
         }
     }

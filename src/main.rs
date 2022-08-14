@@ -3,6 +3,7 @@ mod cli;
 mod connection;
 mod error;
 mod events;
+mod events_utils;
 mod logging;
 mod metrics;
 mod process;
