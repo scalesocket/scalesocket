@@ -15,11 +15,11 @@ pub struct Config {
     #[clap(long, action)]
     pub json: bool,
 
-    /// Emit message to child on client connect (use %ID for id)
+    /// Emit message to child on client connect (use #ID for id)
     #[clap(long, value_name = "MSG")]
     pub joinmsg: Option<String>,
 
-    /// Emit message to child on client disconnect (use %ID for id)
+    /// Emit message to child on client disconnect (use #ID for id)
     #[clap(long, value_name = "MSG")]
     pub leavemsg: Option<String>,
 

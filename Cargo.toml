@@ -17,4 +17,5 @@ tracing-subscriber = { version = "0.3", features = ["json"] }
 tokio = { version = "1.18.2", features = ["full", "tracing"] }
 tokio-stream = { version = "0.1.8", features = ["sync", "net", "io-util"] }
 tokio-util = { version = "0.7.3", features = ["io"] }
+urlencoding = "2.1.0"
 warp = "0.3"
