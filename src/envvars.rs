@@ -6,21 +6,6 @@ pub struct Env {
     pub query: HashMap<String, String>,
 }
 
-impl From<Env> for HashMap<String, String> {
-    /// Performs conversion and turns query keys to uppercase
-    fn from(env: Env) -> Self {
-        let mut result: HashMap<String, String> = env.cgi.into();
-        let query_uppercase: HashMap<String, String> = env
-            .query
-            .into_iter()
-            .map(|(k, v)| (k.to_uppercase(), v))
-            .collect();
-
-        result.extend(query_uppercase);
-        result
-    }
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct CGIEnv {
     /// URL-encoded search or parameter string
@@ -56,15 +41,14 @@ impl From<CGIEnv> for HashMap<String, String> {
 pub fn replace_template_env(template: &str, conn: usize, env: &Env) -> String {
     let template = template.replace("#ID", &conn.to_string());
 
-    // NOTE: implicit uppercase
-    let cgi_upcase_keys = env.cgi.clone().into();
-    let query_upcase_keys = env.query.clone().keys_upper();
+    let cgi_vars = env.cgi.clone().into();
+    let query_vars = env.query.clone().keys_upper();
 
-    let result = replace_template(template, query_upcase_keys, "#QUERY_", true);
-    replace_template(result, cgi_upcase_keys, "#", false)
+    let result = replace_template(template, cgi_vars, "#", false);
+    replace_template(result, query_vars, "#QUERY_", true)
 }
 
-pub fn replace_template(
+fn replace_template(
     template: String,
     replace_values: HashMap<String, String>,
     prefix: &str,
@@ -104,15 +88,37 @@ mod tests {
         HashMap::from([("foo".to_string(), "bar baz".to_string())])
     }
 
+    fn create_cgi() -> CGIEnv {
+        CGIEnv {
+            query_string: "foo=".to_string(),
+            remote_addr: "127.0.0.1:1234".to_string(),
+        }
+    }
+
     #[tokio::test]
     async fn test_replace_template_env() {
         let env = Env {
-            cgi: CGIEnv::default(),
+            cgi: create_cgi(),
             query: create_query(),
         };
-        let conn = 1;
-        let result = replace_template_env("test #ID #QUERY_FOO", conn, &env);
+        let result = replace_template_env("test #ID #REMOTE_ADDR #QUERY_FOO", 1, &env);
 
-        assert_eq!(result, "test 1 bar%20baz");
+        assert_eq!(result, "test 1 127.0.0.1:1234 bar%20baz");
+    }
+
+    #[tokio::test]
+    async fn test_replace_template_env_omits_query_overrides() {
+        let query = HashMap::from([
+            ("remote_addr".to_string(), "overridden".to_string()),
+            ("string".to_string(), "overridden".to_string()),
+            ("hack".to_string(), "#SOMETHING".to_string()),
+        ]);
+        let env = Env {
+            cgi: create_cgi(),
+            query,
+        };
+        let result = replace_template_env("test #REMOTE_ADDR #QUERY_STRING #QUERY_HACK", 1, &env);
+
+        assert_eq!(result, "test 127.0.0.1:1234 foo= %23SOMETHING");
     }
 }
