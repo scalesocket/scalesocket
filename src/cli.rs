@@ -48,13 +48,21 @@ pub struct Config {
     #[clap(long, parse(try_from_str = parse_ports), value_name = "START:END", default_value = "9001:9999")]
     pub tcpports: Range<u16>,
 
-    /// Connect to child using TCP instead of stdio
+    /// Connect to child using TCP instead of stdio. Use PORT to bind
     #[clap(long, action)]
     pub tcp: bool,
 
     /// Increase level of verbosity
     #[clap(short, parse(from_occurrences))]
     pub verbosity: usize,
+
+    /// Delay before attaching to child [default: 1 for --tcp]
+    #[clap(
+        long,
+        value_name = "SECONDS",
+        default_value_if("tcp", Some("true"), Some("1"))
+    )]
+    pub cmd_attach_delay: Option<u64>,
 
     /// Command to wrap
     #[clap(required = true)]

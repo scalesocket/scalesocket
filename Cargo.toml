@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 bytes = "1.2.0"
-clap = { version = "3.1.18", features = ["derive"] }
+clap = { version = "3.2.22", features = ["derive"] }
 futures = "0.3.21"
 id-pool = { version = "0.2.2", default-features = false, features = ["u16"] }
 prometheus-client = "0.17.0"
