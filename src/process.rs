@@ -96,6 +96,11 @@ async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
                 tracing::debug!("spawned childprocess with unknown pid");
             }
 
+            if let Some(attach_delay) = process.attach_delay {
+                tracing::debug!("delaying stdin attach for {} seconds", attach_delay);
+                sleep(Duration::from_secs(attach_delay)).await;
+            }
+
             let stdin = child
                 .stdin
                 .take()
@@ -130,7 +135,11 @@ async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
         }
         Source::Tcp(cmd, addr) => {
             let child = spawn_child(cmd)?;
-            sleep(Duration::from_secs(1)).await;
+
+            if let Some(attach_delay) = process.attach_delay {
+                tracing::debug!("delaying tcp connect for {} seconds", attach_delay);
+                sleep(Duration::from_secs(attach_delay)).await;
+            }
 
             let stream = match TcpStream::connect(addr).await {
                 Ok(s) => s,
@@ -174,6 +183,7 @@ async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
 pub struct Process {
     source: Option<Source>,
     is_binary: bool,
+    attach_delay: Option<u64>,
     pub tx: ToProcessTx,
     pub rx: Option<ToProcessRx>,
     pub cast_tx: FromProcessTx,
@@ -216,6 +226,7 @@ impl Process {
         Self {
             source,
             is_binary: config.binary,
+            attach_delay: config.cmd_attach_delay,
             tx,
             rx: Some(rx),
             cast_tx,
