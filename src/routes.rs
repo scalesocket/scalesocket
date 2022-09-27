@@ -7,7 +7,6 @@ use crate::{
 };
 
 use {
-    futures::FutureExt,
     prometheus_client::encoding::text::encode,
     prometheus_client::registry::Registry,
     serde_json::json,
@@ -23,7 +22,9 @@ pub fn handle(
     metrics: Metrics,
     registry: Option<Registry>,
 ) -> impl futures::Future<Output = ()> {
-    let shutdown_rx = shutdown_rx.map(|_| ());
+    let shutdown_rx = async {
+        shutdown_rx.await.ok();
+    };
 
     warp::serve(
         socket(tx)

@@ -1,4 +1,3 @@
-
 use crate::types::{Event, EventTx, ShutdownTx};
 use futures::FutureExt;
 use tokio::signal::unix::{signal, SignalKind};

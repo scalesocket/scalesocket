@@ -33,8 +33,8 @@ struct State {
 
 #[instrument(name = "event", skip_all)]
 pub async fn handle(
-    mut rx: EventRx,
     tx: EventTx,
+    mut rx: EventRx,
     config: Config,
     metrics: Metrics,
 ) -> AppResult<()> {

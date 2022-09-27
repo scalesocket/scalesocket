@@ -34,7 +34,7 @@ async fn main() {
 
     tracing::info! { "listening at {}", config.addr };
 
-    let handle_events = events::handle(rx, tx.clone(), config.clone(), mtr.clone()).unit_error();
+    let handle_events = events::handle(tx.clone(), rx, config.clone(), mtr.clone()).unit_error();
     let handle_routes = routes::handle(tx, config, routes_shutdown_rx, mtr, registry).unit_error();
     let handle_signal = signal::handle(routes_shutdown_tx, events_shutdown_tx).unit_error();
 
@@ -128,7 +128,7 @@ mod tests {
             tx.send(Event::Shutdown).ok();
             Ok(())
         };
-        let handle = events::handle(rx, tx.clone(), config, metrics);
+        let handle = events::handle(tx.clone(), rx, config, metrics);
 
         let _ = tokio::try_join!(handle, shutdown, inspect);
         assert_eq!(received_messages, vec!["hello"]);
