@@ -59,7 +59,8 @@ pub async fn handle(mut process: Process, barrier: Option<Arc<Barrier>>) -> AppR
                 cast(msg);
             },
             _ = proc.kill_rx.next() => {
-                // TODO propagate signal to child
+                // TODO send SIGINT and wait
+                let _ = child.kill().await;
                 break None;
             }
             status = child.wait() => {
