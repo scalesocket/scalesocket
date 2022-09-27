@@ -1,33 +1,27 @@
 use crate::{
-    cli::Config,
-    envvars::CGIEnv,
+    channel::{Channel, Source},
     error::{AppError, AppResult},
-    types::{
-        FromProcessTx, PortID, ShutdownRx, ShutdownRxStream, ShutdownTx, ToProcessRx,
-        ToProcessRxStream, ToProcessTx,
-    },
-    utils::{exit_code, run},
+    types::{ShutdownRxStream, ToProcessRxStream},
+    utils::exit_code,
 };
 use {
     bytes::Bytes,
     futures::TryStreamExt,
     futures::{FutureExt, StreamExt},
     std::io::Result as IOResult,
-    std::net::{SocketAddr, SocketAddrV4},
     std::sync::Arc,
     tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     tokio::net::TcpStream,
     tokio::process::{Child, Command},
-    tokio::sync::{broadcast, mpsc, oneshot, Barrier},
+    tokio::sync::Barrier,
     tokio::time::{sleep, Duration},
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
     tokio_util::codec::{BytesCodec, FramedRead},
     tracing::instrument,
-    warp::ws::Message,
 };
 
 #[instrument(parent = None, name = "process", skip_all)]
-pub async fn handle(mut process: Process, barrier: Option<Arc<Barrier>>) -> AppResult<Option<i32>> {
+pub async fn handle(mut process: Channel, barrier: Option<Arc<Barrier>>) -> AppResult<Option<i32>> {
     if let Some(barrier) = barrier.clone() {
         barrier.wait().await;
         tracing::debug!("waited for connection");
@@ -35,28 +29,15 @@ pub async fn handle(mut process: Process, barrier: Option<Arc<Barrier>>) -> AppR
     let mut proc = spawn(&mut process).await?;
     let mut child = proc.child.take().unwrap();
 
-    let cast = |msg: Bytes| {
-        if process.is_binary {
-            let _ = process.cast_tx.send(Message::binary(msg));
-        } else {
-            let msg = std::str::from_utf8(&msg).unwrap_or_default();
-            let _ = process.cast_tx.send(Message::text(msg));
-        };
-    };
-
     tracing::debug! { "process handler listening to child" };
 
     let exit_code = loop {
         tokio::select! {
             Some(v) = proc.sock_rx.next() => {
-                if process.is_binary {
-                    proc.proc_tx.write_all(&v).await?;
-                } else {
-                    proc.proc_tx.write_all(&[&v[..], b"\n"].concat()).await?;
-                };
+                proc.write_child(v, process.is_binary).await?;
             }
             Some(Ok(msg)) = proc.proc_rx.next() => {
-                cast(msg);
+                process.write_sock(msg);
             },
             _ = proc.kill_rx.next() => {
                 // TODO send SIGINT and wait
@@ -71,14 +52,14 @@ pub async fn handle(mut process: Process, barrier: Option<Arc<Barrier>>) -> AppR
 
     // Stream remaining messages
     while let Some(Ok(msg)) = proc.proc_rx.next().await {
-        cast(msg);
+        process.write_sock(msg);
     }
 
     tracing::debug! { "process handler done" };
     Ok(exit_code)
 }
 
-async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
+async fn spawn(process: &mut Channel) -> AppResult<RunningProcess> {
     let kill_rx = process.kill_rx.take().unwrap().into_stream();
     let sock_rx = UnboundedReceiverStream::new(process.rx.take().unwrap());
 
@@ -180,24 +161,6 @@ async fn spawn(process: &mut Process) -> AppResult<RunningProcess> {
     }
 }
 
-#[derive(Debug)]
-pub struct Process {
-    source: Option<Source>,
-    is_binary: bool,
-    attach_delay: Option<u64>,
-    pub tx: ToProcessTx,
-    pub rx: Option<ToProcessRx>,
-    pub cast_tx: FromProcessTx,
-    pub kill_rx: Option<ShutdownRx>,
-    pub kill_tx: Option<ShutdownTx>,
-}
-
-#[derive(Debug)]
-pub enum Source {
-    Stdio(Command),
-    Tcp(Command, SocketAddr),
-}
-
 struct RunningProcess {
     child: Option<Child>,
     sock_rx: ToProcessRxStream,
@@ -209,31 +172,14 @@ struct RunningProcess {
 type FromProcessTxAny = Box<dyn tokio::io::AsyncWrite + Unpin + Send>;
 type FromProcessRxAny = Box<dyn futures::Stream<Item = IOResult<Bytes>> + Unpin + Send>;
 
-impl Process {
-    pub fn new(config: &Config, port: Option<PortID>, env: CGIEnv) -> Self {
-        let (tx, rx) = mpsc::unbounded_channel::<Bytes>();
-        let (cast_tx, _) = broadcast::channel(16);
-        let (kill_tx, kill_rx) = oneshot::channel();
-
-        let cmd = run(&config.cmd, &config.args, port, env.into(), &config.passenv);
-        let source = match &config.tcp {
-            true => {
-                let addr = SocketAddrV4::new("127.0.0.1".parse().unwrap(), port.unwrap()).into();
-                Some(Source::Tcp(cmd, addr))
-            }
-            false => Some(Source::Stdio(cmd)),
+impl RunningProcess {
+    pub async fn write_child(&mut self, msg: Bytes, is_binary: bool) -> IOResult<()> {
+        if is_binary {
+            self.proc_tx.write_all(&msg).await?;
+        } else {
+            self.proc_tx.write_all(&[&msg[..], b"\n"].concat()).await?;
         };
-
-        Self {
-            source,
-            is_binary: config.binary,
-            attach_delay: config.cmd_attach_delay,
-            tx,
-            rx: Some(rx),
-            cast_tx,
-            kill_tx: Some(kill_tx),
-            kill_rx: Some(kill_rx),
-        }
+        Ok(())
     }
 }
 
@@ -243,13 +189,14 @@ mod tests {
     use clap::Parser;
     use futures::StreamExt;
     use tokio_stream::wrappers::BroadcastStream;
+    use warp::ws::Message;
 
-    use super::{handle, spawn, Message, Process};
-    use crate::{cli::Config, envvars::CGIEnv};
+    use super::{handle, spawn};
+    use crate::{channel::Channel, cli::Config, envvars::CGIEnv};
 
-    fn create_process(args: &'static str) -> Process {
+    fn create_process(args: &'static str) -> Channel {
         let config = Config::parse_from(args.split_whitespace());
-        Process::new(&config, None, CGIEnv::default())
+        Channel::new(&config, None, CGIEnv::default())
     }
 
     #[tokio::test]

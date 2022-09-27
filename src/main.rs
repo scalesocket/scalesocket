@@ -1,4 +1,5 @@
 #![feature(async_closure, bool_to_option)]
+mod channel;
 mod cli;
 mod connection;
 mod envvars;

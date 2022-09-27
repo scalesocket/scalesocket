@@ -1,10 +1,11 @@
 use crate::{
+    channel::Channel,
     cli::Config,
     connection,
     envvars::{replace_template_env, Env},
     error::AppResult,
     metrics::Metrics,
-    process::{self, Process},
+    process,
     types::{
         ConnID, Event, EventRx, EventTx, FromProcessTx, PortID, RoomID, ShutdownTx, ToProcessTx,
     },
@@ -153,16 +154,12 @@ fn spawn(
         tracing::debug!("reserved port {}", port);
     }
 
-    let mut proc = Process::new(&state.cfg, port, env.cgi.clone());
-    let proc_tx_broadcast = proc.cast_tx.clone();
-    let proc_tx = proc.tx.clone();
-    let kill_tx = proc.kill_tx.take().unwrap();
+    let mut proc = Channel::new(&state.cfg, port, env.cgi.clone());
+    let senders = proc.take_senders();
 
     let on_init = || {
         // Store sender handles in map
-        state
-            .procs
-            .insert(room.to_string(), (proc_tx_broadcast, proc_tx, kill_tx));
+        state.procs.insert(room.to_string(), senders);
     };
 
     let on_kill = || {
