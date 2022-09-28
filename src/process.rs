@@ -21,12 +21,12 @@ use {
 };
 
 #[instrument(parent = None, name = "process", skip_all)]
-pub async fn handle(mut process: Channel, barrier: Option<Arc<Barrier>>) -> AppResult<Option<i32>> {
+pub async fn handle(mut channel: Channel, barrier: Option<Arc<Barrier>>) -> AppResult<Option<i32>> {
     if let Some(barrier) = barrier.clone() {
         barrier.wait().await;
         tracing::debug!("waited for connection");
     }
-    let mut proc = spawn(&mut process).await?;
+    let mut proc = spawn(&mut channel).await?;
     let mut child = proc.child.take().unwrap();
 
     tracing::debug! { "process handler listening to child" };
@@ -34,10 +34,10 @@ pub async fn handle(mut process: Channel, barrier: Option<Arc<Barrier>>) -> AppR
     let exit_code = loop {
         tokio::select! {
             Some(v) = proc.sock_rx.next() => {
-                proc.write_child(v, process.is_binary).await?;
+                proc.write_child(v, channel.is_binary).await?;
             }
             Some(Ok(msg)) = proc.proc_rx.next() => {
-                process.write_sock(msg);
+                channel.write_sock(msg);
             },
             _ = proc.kill_rx.next() => {
                 // TODO send SIGINT and wait
@@ -52,23 +52,23 @@ pub async fn handle(mut process: Channel, barrier: Option<Arc<Barrier>>) -> AppR
 
     // Stream remaining messages
     while let Some(Ok(msg)) = proc.proc_rx.next().await {
-        process.write_sock(msg);
+        channel.write_sock(msg);
     }
 
     tracing::debug! { "process handler done" };
     Ok(exit_code)
 }
 
-async fn spawn(process: &mut Channel) -> AppResult<RunningProcess> {
-    let kill_rx = process.kill_rx.take().unwrap().into_stream();
-    let sock_rx = UnboundedReceiverStream::new(process.rx.take().unwrap());
+async fn spawn(channel: &mut Channel) -> AppResult<RunningProcess> {
+    let kill_rx = channel.kill_rx.take().unwrap().into_stream();
+    let sock_rx = UnboundedReceiverStream::new(channel.rx.take().unwrap());
 
     let spawn_child = |mut cmd: Command| {
         cmd.spawn()
             .map_err(|e| AppError::ProcessSpawnError(e.to_string()))
     };
 
-    match process.source.take().unwrap() {
+    match channel.source.take().unwrap() {
         Source::Stdio(cmd) => {
             let mut child = spawn_child(cmd)?;
 
@@ -78,7 +78,7 @@ async fn spawn(process: &mut Channel) -> AppResult<RunningProcess> {
                 tracing::debug!("spawned childprocess with unknown pid");
             }
 
-            if let Some(attach_delay) = process.attach_delay {
+            if let Some(attach_delay) = channel.attach_delay {
                 tracing::debug!("delaying stdin attach for {} seconds", attach_delay);
                 sleep(Duration::from_secs(attach_delay)).await;
             }
@@ -93,7 +93,7 @@ async fn spawn(process: &mut Channel) -> AppResult<RunningProcess> {
                 .ok_or(AppError::ProcessStdIOError("stdout"))?;
 
             let proc_rx: Box<dyn futures::Stream<Item = IOResult<Bytes>> + Unpin + Send> =
-                match process.is_binary {
+                match channel.is_binary {
                     true => {
                         let buffer = BufReader::new(stdout);
                         let stream = FramedRead::new(buffer, BytesCodec::new());
@@ -118,7 +118,7 @@ async fn spawn(process: &mut Channel) -> AppResult<RunningProcess> {
         Source::Tcp(cmd, addr) => {
             let child = spawn_child(cmd)?;
 
-            if let Some(attach_delay) = process.attach_delay {
+            if let Some(attach_delay) = channel.attach_delay {
                 tracing::debug!("delaying tcp connect for {} seconds", attach_delay);
                 sleep(Duration::from_secs(attach_delay)).await;
             }
@@ -137,7 +137,7 @@ async fn spawn(process: &mut Channel) -> AppResult<RunningProcess> {
 
             let (rx, tx) = stream.into_split();
             let proc_rx: Box<dyn futures::Stream<Item = IOResult<Bytes>> + Unpin + Send> =
-                match process.is_binary {
+                match channel.is_binary {
                     true => {
                         let buffer = BufReader::new(rx);
                         let stream = FramedRead::new(buffer, BytesCodec::new());
