@@ -1,13 +1,14 @@
 use crate::{
     cli::Config,
     envvars::CGIEnv,
+    error::{AppError, AppResult},
     types::{FromProcessTx, PortID, ShutdownRx, ShutdownTx, ToProcessRx, ToProcessTx},
     utils::run,
 };
 use {
     bytes::Bytes,
     std::net::{SocketAddr, SocketAddrV4},
-    tokio::process::Command,
+    tokio::process::{Child, Command as ProcessCommand},
     tokio::sync::{broadcast, mpsc, oneshot},
     warp::ws::Message,
 };
@@ -40,9 +41,9 @@ impl Channel {
         let source = match &config.tcp {
             true => {
                 let addr = SocketAddrV4::new("127.0.0.1".parse().unwrap(), port.unwrap()).into();
-                Some(Source::Tcp(cmd, addr))
+                Some(Source::Tcp(Command::new(cmd), addr))
             }
-            false => Some(Source::Stdio(cmd)),
+            false => Some(Source::Stdio(Command::new(cmd))),
         };
 
         Self {
@@ -71,5 +72,20 @@ impl Channel {
             let msg = std::str::from_utf8(&msg).unwrap_or_default();
             let _ = self.cast_tx.send(Message::text(msg));
         };
+    }
+}
+
+#[derive(Debug)]
+pub struct Command(ProcessCommand);
+
+impl Command {
+    pub fn new(cmd: ProcessCommand) -> Self {
+        Self(cmd)
+    }
+
+    pub fn spawn(mut self) -> AppResult<Child> {
+        self.0
+            .spawn()
+            .map_err(|e| AppError::ProcessSpawnError(e.to_string()))
     }
 }

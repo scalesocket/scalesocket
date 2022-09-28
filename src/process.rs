@@ -12,7 +12,7 @@ use {
     std::sync::Arc,
     tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     tokio::net::TcpStream,
-    tokio::process::{Child, Command},
+    tokio::process::Child,
     tokio::sync::Barrier,
     tokio::time::{sleep, Duration},
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
@@ -63,14 +63,9 @@ async fn spawn(channel: &mut Channel) -> AppResult<RunningProcess> {
     let kill_rx = channel.kill_rx.take().unwrap().into_stream();
     let sock_rx = UnboundedReceiverStream::new(channel.rx.take().unwrap());
 
-    let spawn_child = |mut cmd: Command| {
-        cmd.spawn()
-            .map_err(|e| AppError::ProcessSpawnError(e.to_string()))
-    };
-
     match channel.source.take().unwrap() {
         Source::Stdio(cmd) => {
-            let mut child = spawn_child(cmd)?;
+            let mut child = cmd.spawn()?;
 
             if let Some(pid) = child.id() {
                 tracing::debug!("spawned childprocess with pid {}", pid);
@@ -116,7 +111,7 @@ async fn spawn(channel: &mut Channel) -> AppResult<RunningProcess> {
             })
         }
         Source::Tcp(cmd, addr) => {
-            let child = spawn_child(cmd)?;
+            let child = cmd.spawn()?;
 
             if let Some(attach_delay) = channel.attach_delay {
                 tracing::debug!("delaying tcp connect for {} seconds", attach_delay);
