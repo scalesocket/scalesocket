@@ -1,7 +1,7 @@
 use serde_json::Value;
 
 use crate::types::{ConnID, Framing};
-use {sender_sink::wrappers::SinkError, warp::ws::Message};
+use {bytes::Bytes, sender_sink::wrappers::SinkError, warp::ws::Message};
 
 pub trait Address<T> {
     fn to(self, to: usize) -> (Option<usize>, T);
@@ -20,6 +20,23 @@ impl Address<Message> for Message {
 
     fn broadcast(self) -> (Option<usize>, Message) {
         (None, self)
+    }
+}
+
+pub fn decode(msg: &Bytes, framing: Option<Framing>) -> Option<ConnID> {
+    match framing {
+        Some(mode) => match mode {
+            Framing::Binary => todo!(),
+            Framing::JSON => match serde_json::from_slice::<Value>(&msg) {
+                Ok(ref payload) => payload
+                    .get("id")
+                    .and_then(|v: &Value| v.as_u64())
+                    // TODO may truncate
+                    .and_then(|v: u64| usize::try_from(v).ok()),
+                _ => None,
+            },
+        },
+        None => None,
     }
 }
 

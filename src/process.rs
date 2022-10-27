@@ -190,7 +190,7 @@ mod tests {
     use warp::ws::Message;
 
     use super::{handle, spawn};
-    use crate::{channel::Channel, cli::Config, envvars::CGIEnv};
+    use crate::{channel::Channel, cli::Config, envvars::CGIEnv, message::Address};
 
     fn create_process(args: &'static str) -> Channel {
         let config = Config::parse_from(args.split_whitespace());
@@ -222,8 +222,8 @@ mod tests {
         assert_eq!(
             output,
             vec![
-                Message::text("QUERY_STRING="),
-                Message::text("REMOTE_ADDR=")
+                Message::text("QUERY_STRING=").broadcast(),
+                Message::text("REMOTE_ADDR=").broadcast(),
             ]
         );
     }
@@ -236,7 +236,7 @@ mod tests {
         handle(process, None).await.ok();
         let output = proc_rx.recv().await.ok();
 
-        assert_eq!(output, Some(Message::text("foo")));
+        assert_eq!(output, Some(Message::text("foo").broadcast()));
     }
 
     #[tokio::test]
@@ -247,7 +247,18 @@ mod tests {
         handle(process, None).await.ok();
         let output = proc_rx.recv().await.ok();
 
-        assert_eq!(output, Some(Message::binary([10])));
+        assert_eq!(output, Some(Message::binary([10]).broadcast()));
+    }
+
+    #[tokio::test]
+    async fn test_handle_process_output_framed_json() {
+        let process = create_process("scalesocket --frame=json echo -- {\"id\": 0}");
+        let mut proc_rx = process.cast_tx.subscribe();
+
+        handle(process, None).await.ok();
+        let output = proc_rx.recv().await.ok();
+
+        assert_eq!(output, Some(Message::text("{\"id\": 0}").to(0)));
     }
 
     #[tokio::test]
@@ -265,6 +276,6 @@ mod tests {
         tokio::try_join!(handle, send).ok();
         let output = proc_rx.recv().await.ok();
 
-        assert_eq!(output, Some(Message::text("foo")));
+        assert_eq!(output, Some(Message::text("foo").broadcast()));
     }
 }

@@ -6,20 +6,19 @@ use crate::{
 
 use {
     futures::{future::ready, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
-    sender_sink::wrappers::{SinkError, UnboundedSenderSink},
-    serde_json::Value,
+    sender_sink::wrappers::UnboundedSenderSink,
     std::sync::Arc,
     tokio::sync::Barrier,
     tokio::try_join,
     tokio_stream::wrappers::BroadcastStream,
     tracing::instrument,
-    warp::ws::{Message, WebSocket},
+    warp::ws::WebSocket,
 };
 
 #[instrument(parent = None, name = "connection", skip_all)]
 pub async fn handle(
     ws: WebSocket,
-    id: ConnID,
+    conn: ConnID,
     framing: Option<Framing>,
     proc_rx: FromProcessRx,
     proc_tx: ToProcessTx,
@@ -31,7 +30,18 @@ pub async fn handle(
 
     // forward process to socket
     let proc_to_sock = proc_rx
-        .filter_map(|line| ready(line.ok().map(Ok)))
+        .filter_map(|line| ready(line.ok()))
+        .filter_map(|(id, msg)| {
+            ready(match id {
+                // message is to us
+                Some(id) if id == conn => Some(msg),
+                // message is not to us
+                Some(_) => None,
+                // message is broadcast
+                None => Some(msg),
+            })
+        })
+        .map(Ok)
         .forward(sock_tx);
 
     // forward socket to process, until closed
@@ -42,7 +52,7 @@ pub async fn handle(
             let result = sock_rx
                 .try_take_while(|msg| ready(Ok(!msg.is_close())))
                 .filter_map(|line| ready(line.ok()))
-                .map(|msg| encode(msg, id, framing))
+                .map(|msg| encode(msg, conn, framing))
                 .forward(proc_tx_sink)
                 .await;
 
@@ -82,7 +92,7 @@ pub async fn handle(
             _ => unreachable!(),
         }
     }
-    tracing::debug! { id = id, "connection handler done" };
+    tracing::debug! { id = conn, "connection handler done" };
 
     Ok(())
 }

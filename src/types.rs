@@ -1,6 +1,5 @@
 use crate::envvars::Env;
 use {
-    bytes::Bytes,
     tokio::sync::{broadcast, mpsc, oneshot},
     tokio_stream::wrappers::UnboundedReceiverStream,
     warp::ws::{Message, WebSocket},
@@ -51,5 +50,5 @@ pub type ShutdownRx = oneshot::Receiver<()>;
 pub type ShutdownRxStream = futures::future::IntoStream<ShutdownRx>;
 
 // Channel for passing data to from child process
-pub type FromProcessTx = broadcast::Sender<Message>;
-pub type FromProcessRx = broadcast::Receiver<Message>;
+pub type FromProcessTx = broadcast::Sender<(Option<ConnID>, Message)>;
+pub type FromProcessRx = broadcast::Receiver<(Option<ConnID>, Message)>;
