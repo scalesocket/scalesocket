@@ -1,3 +1,4 @@
+use crate::types::Framing;
 use {clap::Parser, std::net::SocketAddr, std::ops::Range, std::path::PathBuf};
 
 #[derive(Parser, Debug, Clone)]
@@ -35,6 +36,19 @@ pub struct Config {
         default_value = "PATH,DYLD_LIBRARY_PATH"
     )]
     pub passenv: Vec<String>,
+
+    /// Enable framing and routing for messages
+    #[clap(
+        long,
+        alias = "strict",
+        value_parser,
+        value_name = "MODE",
+        default_missing_value = "binary",
+        min_values = 0,
+        require_equals = true,
+        hide_possible_values = true
+    )]
+    pub frame: Option<Framing>,
 
     /// Serve static files from directory over HTTP
     #[clap(long, value_parser, value_name = "DIR")]

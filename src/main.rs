@@ -6,6 +6,7 @@ mod envvars;
 mod error;
 mod events;
 mod logging;
+mod message;
 mod metrics;
 mod process;
 mod routes;

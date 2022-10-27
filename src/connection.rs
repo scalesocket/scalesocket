@@ -1,22 +1,26 @@
 use crate::{
     error::{AppError, AppResult},
-    types::{FromProcessRx, ToProcessTx},
+    message::encode,
+    types::{ConnID, Framing, FromProcessRx, ToProcessTx},
 };
+
 use {
-    bytes::Bytes,
     futures::{future::ready, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
-    sender_sink::wrappers::UnboundedSenderSink,
+    sender_sink::wrappers::{SinkError, UnboundedSenderSink},
+    serde_json::Value,
     std::sync::Arc,
     tokio::sync::Barrier,
     tokio::try_join,
     tokio_stream::wrappers::BroadcastStream,
     tracing::instrument,
-    warp::ws::WebSocket,
+    warp::ws::{Message, WebSocket},
 };
 
 #[instrument(parent = None, name = "connection", skip_all)]
 pub async fn handle(
     ws: WebSocket,
+    id: ConnID,
+    framing: Option<Framing>,
     proc_rx: FromProcessRx,
     proc_tx: ToProcessTx,
     barrier: Option<Arc<Barrier>>,
@@ -27,18 +31,18 @@ pub async fn handle(
 
     // forward process to socket
     let proc_to_sock = proc_rx
-        .filter_map(|line| async { line.ok().map(Ok).or(None) })
+        .filter_map(|line| ready(line.ok().map(Ok)))
         .forward(sock_tx);
 
     // forward socket to process, until closed
     let sock_to_proc = {
         let proc_tx_sink = UnboundedSenderSink::from(proc_tx.clone());
-
         async move {
             // forward until close message from client
             let result = sock_rx
                 .try_take_while(|msg| ready(Ok(!msg.is_close())))
-                .filter_map(|data| ready(data.map(|msg| Ok(Bytes::from(msg.into_bytes()))).ok()))
+                .filter_map(|line| ready(line.ok()))
+                .map(|msg| encode(msg, id, framing))
                 .forward(proc_tx_sink)
                 .await;
 
@@ -78,7 +82,7 @@ pub async fn handle(
             _ => unreachable!(),
         }
     }
-    tracing::debug! { "connection handler done" };
+    tracing::debug! { id = id, "connection handler done" };
 
     Ok(())
 }

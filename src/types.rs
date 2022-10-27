@@ -30,14 +30,20 @@ pub enum Event {
     Shutdown,
 }
 
+#[derive(Debug, clap::ValueEnum, Clone, Copy)]
+pub enum Framing {
+    JSON,
+    Binary,
+}
+
 // Channel for app events
 pub type EventTx = mpsc::UnboundedSender<Event>;
 pub type EventRx = mpsc::UnboundedReceiver<Event>;
 
 // Channel for passing data to child process
-pub type ToProcessTx = mpsc::UnboundedSender<Bytes>;
-pub type ToProcessRx = mpsc::UnboundedReceiver<Bytes>;
-pub type ToProcessRxStream = UnboundedReceiverStream<Bytes>;
+pub type ToProcessTx = mpsc::UnboundedSender<Message>;
+pub type ToProcessRx = mpsc::UnboundedReceiver<Message>;
+pub type ToProcessRxStream = UnboundedReceiverStream<Message>;
 
 // Channel for triggering shutdown of child process
 pub type ShutdownTx = oneshot::Sender<()>;

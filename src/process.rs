@@ -18,6 +18,7 @@ use {
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
     tokio_util::codec::{BytesCodec, FramedRead},
     tracing::instrument,
+    warp::ws::Message,
 };
 
 #[instrument(parent = None, name = "process", skip_all)]
@@ -168,11 +169,13 @@ type FromProcessTxAny = Box<dyn tokio::io::AsyncWrite + Unpin + Send>;
 type FromProcessRxAny = Box<dyn futures::Stream<Item = IOResult<Bytes>> + Unpin + Send>;
 
 impl RunningProcess {
-    pub async fn write_child(&mut self, msg: Bytes, is_binary: bool) -> IOResult<()> {
+    pub async fn write_child(&mut self, msg: Message, is_binary: bool) -> IOResult<()> {
         if is_binary {
-            self.proc_tx.write_all(&msg).await?;
+            self.proc_tx.write_all(&msg.as_bytes()).await?;
         } else {
-            self.proc_tx.write_all(&[&msg[..], b"\n"].concat()).await?;
+            self.proc_tx
+                .write_all(&[&msg.as_bytes()[..], b"\n"].concat())
+                .await?;
         };
         Ok(())
     }
@@ -254,7 +257,7 @@ mod tests {
         let sock_tx = process.tx.clone();
 
         let send = async {
-            sock_tx.send("foo\n".into()).ok();
+            sock_tx.send(Message::text("foo\n")).ok();
             Ok(())
         };
         let handle = handle(process, None);

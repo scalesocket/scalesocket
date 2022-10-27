@@ -19,7 +19,7 @@ use {
     std::sync::Arc,
     tokio::sync::Barrier,
     tracing::{instrument, Instrument},
-    warp::ws::WebSocket,
+    warp::ws::{Message, WebSocket},
 };
 
 type ConnectionMap = HashMap<RoomID, HashSet<ConnID>>;
@@ -92,6 +92,7 @@ fn attach(
     barrier: Option<Arc<Barrier>>,
 ) {
     let conn = new_conn_id();
+    let mode = state.cfg.frame;
 
     // Get process handles from map
     let (proc_tx_broadcast, proc_tx, _) = state.procs.get(&room).expect("room not in process map");
@@ -111,7 +112,7 @@ fn attach(
             // Inform child
             if let Some(ref join_msg_template) = state.cfg.joinmsg {
                 let join_msg = replace_template_env(join_msg_template, conn, &env);
-                let _ = proc_tx.send(join_msg.into());
+                let _ = proc_tx.send(Message::text(join_msg));
             }
         }
     };
@@ -129,7 +130,7 @@ fn attach(
     };
 
     tokio::spawn(
-        connection::handle(*ws, proc_rx, proc_tx.clone(), barrier)
+        connection::handle(*ws, conn, mode, proc_rx, proc_tx.clone(), barrier)
             .then({
                 // NOTE: we invoke on_init closure immediately...
                 on_init();
@@ -210,7 +211,7 @@ fn disconnect(room: RoomID, env: Env, conn: ConnID, state: &mut State) {
         // Inform child
         if let Some(ref leave_msg_template) = state.cfg.leavemsg {
             let leave_msg = replace_template_env(leave_msg_template, conn, &env);
-            let _ = proc_tx.send(leave_msg.into());
+            let _ = proc_tx.send(Message::text(leave_msg));
         }
     }
 
@@ -251,7 +252,6 @@ fn shutdown(state: State) {
 mod tests {
 
     use crate::cli::Config;
-    use bytes::Bytes;
     use clap::Parser;
     use std::collections::{HashMap, HashSet};
     use tokio::sync::{
@@ -259,7 +259,7 @@ mod tests {
         mpsc::{self, UnboundedReceiver},
         oneshot,
     };
-    use warp::Filter;
+    use warp::{ws::Message, Filter};
 
     use super::{
         attach, disconnect, Env, Event, FromProcessTx, PortPool, ShutdownTx, State, ToProcessTx,
@@ -274,7 +274,7 @@ mod tests {
     }
 
     fn create_process() -> (
-        UnboundedReceiver<Bytes>,
+        UnboundedReceiver<Message>,
         (FromProcessTx, ToProcessTx, ShutdownTx),
     ) {
         let (tx, rx) = mpsc::unbounded_channel();
@@ -348,7 +348,7 @@ mod tests {
         );
 
         let received_event = rx.recv().await.unwrap();
-        let received_msg = std::str::from_utf8(&received_event).unwrap();
+        let received_msg = std::str::from_utf8(&received_event.as_bytes()).unwrap();
         assert_eq!("foo", received_msg);
     }
 
