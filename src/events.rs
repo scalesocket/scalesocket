@@ -6,9 +6,7 @@ use crate::{
     error::AppResult,
     metrics::Metrics,
     process,
-    types::{
-        ConnID, Event, EventRx, EventTx, FromProcessTx, PortID, RoomID, ShutdownTx, ToProcessTx,
-    },
+    types::{ConnID, Event, EventRx, EventTx, PortID, ProcessSenders, RoomID},
     utils::new_conn_id,
 };
 
@@ -23,7 +21,7 @@ use {
 };
 
 type ConnectionMap = HashMap<RoomID, HashSet<ConnID>>;
-type ProcessMap = HashMap<RoomID, (FromProcessTx, ToProcessTx, ShutdownTx)>;
+type ProcessMap = HashMap<RoomID, ProcessSenders>;
 
 struct State {
     pub conns: ConnectionMap,
@@ -94,7 +92,7 @@ fn attach(
     let conn = new_conn_id();
     let mode = state.cfg.frame;
 
-    // Get process handles from map
+    // Get process senders from map
     let (proc_tx_broadcast, proc_tx, _) = state.procs.get(&room).expect("room not in process map");
     let proc_rx = proc_tx_broadcast.subscribe();
 
@@ -159,7 +157,7 @@ fn spawn(
     let senders = proc.take_senders();
 
     let on_init = || {
-        // Store sender handles in map
+        // Store senders in map
         state.procs.insert(room.to_string(), senders);
     };
 
@@ -251,36 +249,34 @@ fn shutdown(state: State) {
 #[cfg(test)]
 mod tests {
 
-    use crate::cli::Config;
+    use crate::{
+        cli::Config,
+        types::{ProcessSenders, ToProcessRx},
+    };
     use clap::Parser;
     use std::collections::{HashMap, HashSet};
     use tokio::sync::{
         self, broadcast,
-        mpsc::{self, UnboundedReceiver},
+        mpsc::{self},
         oneshot,
     };
-    use warp::{ws::Message, Filter};
+    use warp::Filter;
 
-    use super::{
-        attach, disconnect, Env, Event, FromProcessTx, PortPool, ShutdownTx, State, ToProcessTx,
-    };
+    use super::{attach, disconnect, Env, Event, PortPool, State};
 
     fn create_config(args: &'static str) -> Config {
         Config::parse_from(args.split_whitespace())
     }
 
-    fn create_process_handle() -> (FromProcessTx, ToProcessTx, ShutdownTx) {
+    fn create_process_senders() -> ProcessSenders {
         create_process().1
     }
 
-    fn create_process() -> (
-        UnboundedReceiver<Message>,
-        (FromProcessTx, ToProcessTx, ShutdownTx),
-    ) {
-        let (tx, rx) = mpsc::unbounded_channel();
+    fn create_process() -> (ToProcessRx, ProcessSenders) {
+        let (proc_tx, proc_rx) = mpsc::unbounded_channel();
         let (broadcast_tx, _) = broadcast::channel(16);
         let (kill_tx, _) = oneshot::channel();
-        (rx, (broadcast_tx, tx, kill_tx))
+        (proc_rx, (broadcast_tx, proc_tx, kill_tx))
     }
 
     async fn create_ws() -> warp::ws::WebSocket {
@@ -304,10 +300,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_attach() {
-        let (mut rx, handle) = create_process();
+        let (mut proc_rx, senders) = create_process();
         let mut state = State {
             conns: HashMap::new(),
-            procs: HashMap::from([("room1".to_string(), handle)]),
+            procs: HashMap::from([("room1".to_string(), senders)]),
             cfg: create_config("scalesocket cat --joinmsg=foo"),
             ports: PortPool::new(),
         };
@@ -323,15 +319,15 @@ mod tests {
             None,
         );
 
-        let _ = rx.recv().await;
+        let _ = proc_rx.recv().await;
     }
 
     #[tokio::test]
     async fn test_attach_sends_joinmsg() {
-        let (mut rx, handle) = create_process();
+        let (mut proc_rx, senders) = create_process();
         let mut state = State {
             conns: HashMap::new(),
-            procs: HashMap::from([("room1".to_string(), handle)]),
+            procs: HashMap::from([("room1".to_string(), senders)]),
             cfg: create_config("scalesocket cat --joinmsg=foo"),
             ports: PortPool::new(),
         };
@@ -347,7 +343,7 @@ mod tests {
             None,
         );
 
-        let received_event = rx.recv().await.unwrap();
+        let received_event = proc_rx.recv().await.unwrap();
         let received_msg = std::str::from_utf8(&received_event.as_bytes()).unwrap();
         assert_eq!("foo", received_msg);
     }
@@ -359,7 +355,7 @@ mod tests {
                 ("room1".to_string(), HashSet::from([1])),
                 ("room2".to_string(), HashSet::from([2])),
             ]),
-            procs: HashMap::from([("room1".to_string(), create_process_handle())]),
+            procs: HashMap::from([("room1".to_string(), create_process_senders())]),
             cfg: create_config("scalesocket cat"),
             ports: PortPool::new(),
         };

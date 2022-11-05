@@ -3,7 +3,10 @@ use crate::{
     envvars::CGIEnv,
     error::{AppError, AppResult},
     message::{deserialize, Address},
-    types::{Framing, FromProcessTx, PortID, ShutdownRx, ShutdownTx, ToProcessRx, ToProcessTx},
+    types::{
+        Framing, FromProcessTx, PortID, ProcessSenders, ShutdownRx, ShutdownTx, ToProcessRx,
+        ToProcessTx,
+    },
     utils::run,
 };
 use {
@@ -39,7 +42,13 @@ impl Channel {
         let (cast_tx, _) = broadcast::channel(16);
         let (kill_tx, kill_rx) = oneshot::channel();
 
-        let cmd = run(&config.cmd, &config.args, port, env.into(), &config.passenv);
+        let cmd = run(
+            &config.cmd,
+            config.args.clone(),
+            port,
+            env.into(),
+            &config.passenv,
+        );
         let source = match &config.tcp {
             true => {
                 let addr = SocketAddrV4::new("127.0.0.1".parse().unwrap(), port.unwrap()).into();
@@ -61,7 +70,7 @@ impl Channel {
         }
     }
 
-    pub fn take_senders(&mut self) -> (FromProcessTx, ToProcessTx, ShutdownTx) {
+    pub fn take_senders(&mut self) -> ProcessSenders {
         let proc_tx_broadcast = self.cast_tx.clone();
         let proc_tx = self.tx.clone();
         let kill_tx = self.kill_tx.take().unwrap();

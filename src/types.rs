@@ -52,3 +52,5 @@ pub type ShutdownRxStream = futures::future::IntoStream<ShutdownRx>;
 // Channel for passing data to from child process
 pub type FromProcessTx = broadcast::Sender<(Option<ConnID>, Message)>;
 pub type FromProcessRx = broadcast::Receiver<(Option<ConnID>, Message)>;
+
+pub type ProcessSenders = (FromProcessTx, ToProcessTx, ShutdownTx);

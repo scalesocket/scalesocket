@@ -14,17 +14,13 @@ pub fn new_conn_id() -> ConnID {
     NEXT_CONNECTION_ID.fetch_add(1, Ordering::Relaxed)
 }
 
-pub fn run<I, S>(
+pub fn run(
     program: &str,
-    args: I,
+    args: Vec<String>,
     port: Option<PortID>,
     env_extra: HashMap<String, String>,
     env_allowlist: &[String],
-) -> Command
-where
-    I: IntoIterator<Item = S>,
-    S: AsRef<std::ffi::OsStr>,
-{
+) -> Command {
     // Combine filtered environment with external variables
     let env: HashMap<String, String> = env::vars()
         .filter(|&(ref k, _)| env_allowlist.contains(k))
