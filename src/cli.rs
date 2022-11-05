@@ -1,3 +1,4 @@
+use crate::types::Framing;
 use {clap::Parser, std::net::SocketAddr, std::ops::Range, std::path::PathBuf};
 
 #[derive(Parser, Debug, Clone)]
@@ -35,6 +36,27 @@ pub struct Config {
         default_value = "PATH,DYLD_LIBRARY_PATH"
     )]
     pub passenv: Vec<String>,
+
+    /// Enable framing and routing for messages
+    ///
+    /// Client messages are amended with ID header. Server messages with optional client ID routed to clients.
+    ///
+    /// When set to `json` messages are parsed as JSON. Client messages are amended with an "id" field. Server messages are routed to clients based an optional "id" field.
+    /// When set to `binary` messages are parsed according to gwsocket's strict mode.
+    /// Unparseable messages are dropped.
+    ///
+    /// [default: binary when set, possible values: binary, json]
+    #[clap(
+        long,
+        alias = "strict",
+        value_parser,
+        value_name = "MODE",
+        default_missing_value = "binary",
+        min_values = 0,
+        require_equals = true,
+        hide_possible_values = true
+    )]
+    pub frame: Option<Framing>,
 
     /// Serve static files from directory over HTTP
     #[clap(long, value_parser, value_name = "DIR")]

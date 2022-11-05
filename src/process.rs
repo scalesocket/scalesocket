@@ -18,6 +18,7 @@ use {
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
     tokio_util::codec::{BytesCodec, FramedRead},
     tracing::instrument,
+    warp::ws::Message,
 };
 
 #[instrument(parent = None, name = "process", skip_all)]
@@ -168,11 +169,13 @@ type FromProcessTxAny = Box<dyn tokio::io::AsyncWrite + Unpin + Send>;
 type FromProcessRxAny = Box<dyn futures::Stream<Item = IOResult<Bytes>> + Unpin + Send>;
 
 impl RunningProcess {
-    pub async fn write_child(&mut self, msg: Bytes, is_binary: bool) -> IOResult<()> {
+    pub async fn write_child(&mut self, msg: Message, is_binary: bool) -> IOResult<()> {
         if is_binary {
-            self.proc_tx.write_all(&msg).await?;
+            self.proc_tx.write_all(msg.as_bytes()).await?;
         } else {
-            self.proc_tx.write_all(&[&msg[..], b"\n"].concat()).await?;
+            self.proc_tx
+                .write_all(&[msg.as_bytes(), b"\n"].concat())
+                .await?;
         };
         Ok(())
     }
@@ -187,18 +190,18 @@ mod tests {
     use warp::ws::Message;
 
     use super::{handle, spawn};
-    use crate::{channel::Channel, cli::Config, envvars::CGIEnv};
+    use crate::{channel::Channel, cli::Config, envvars::CGIEnv, message::Address};
 
-    fn create_process(args: &'static str) -> Channel {
+    fn create_channel(args: &'static str) -> Channel {
         let config = Config::parse_from(args.split_whitespace());
         Channel::new(&config, None, CGIEnv::default())
     }
 
     #[tokio::test]
     async fn test_spawn_process() {
-        let mut process = create_process("scalesocket echo");
+        let mut channel = create_channel("scalesocket echo");
 
-        let mut proc = spawn(&mut process).await.unwrap();
+        let mut proc = spawn(&mut channel).await.unwrap();
         let mut child = proc.child.take().unwrap();
 
         assert_eq!(child.wait().await.ok().unwrap().code(), Some(0));
@@ -206,10 +209,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_spawn_passes_cgi_env() {
-        let process = create_process("scalesocket --passenv= printenv");
-        let proc_rx = process.cast_tx.subscribe();
+        let channel = create_channel("scalesocket --passenv= printenv");
+        let proc_rx = channel.cast_tx.subscribe();
 
-        handle(process, None).await.ok();
+        handle(channel, None).await.ok();
         let output = BroadcastStream::new(proc_rx)
             .filter_map(|d| async { d.ok() })
             .take(2)
@@ -219,49 +222,78 @@ mod tests {
         assert_eq!(
             output,
             vec![
-                Message::text("QUERY_STRING="),
-                Message::text("REMOTE_ADDR=")
+                Message::text("QUERY_STRING=").broadcast(),
+                Message::text("REMOTE_ADDR=").broadcast(),
             ]
         );
     }
 
     #[tokio::test]
     async fn test_handle_process_output_lines() {
-        let process = create_process("scalesocket echo -- foo");
-        let mut proc_rx = process.cast_tx.subscribe();
+        let channel = create_channel("scalesocket echo -- foo");
+        let mut proc_rx = channel.cast_tx.subscribe();
 
-        handle(process, None).await.ok();
+        handle(channel, None).await.ok();
         let output = proc_rx.recv().await.ok();
 
-        assert_eq!(output, Some(Message::text("foo")));
+        assert_eq!(output, Some(Message::text("foo").broadcast()));
     }
 
     #[tokio::test]
     async fn test_handle_process_output_binary() {
-        let process = create_process("scalesocket --binary echo");
-        let mut proc_rx = process.cast_tx.subscribe();
+        let channel = create_channel("scalesocket --binary echo");
+        let mut proc_rx = channel.cast_tx.subscribe();
 
-        handle(process, None).await.ok();
+        handle(channel, None).await.ok();
         let output = proc_rx.recv().await.ok();
 
-        assert_eq!(output, Some(Message::binary([10])));
+        assert_eq!(output, Some(Message::binary([10]).broadcast()));
+    }
+
+    #[tokio::test]
+    async fn test_handle_process_output_framed_json() {
+        let channel = create_channel("scalesocket --frame=json echo -- {\"id\": 0}");
+        let mut proc_rx = channel.cast_tx.subscribe();
+
+        handle(channel, None).await.ok();
+        let output = proc_rx.recv().await.ok();
+
+        assert_eq!(output, Some(Message::text("{\"id\": 0}").to(0)));
+    }
+
+    #[tokio::test]
+    async fn test_handle_process_output_framed_binary() {
+        let channel = create_channel(concat!(
+            "scalesocket --frame printf -- ",
+            "\\002\\000\\000\\000", // id
+            "\\001\\000\\000\\000", // type
+            "\\003\\000\\000\\000", // payload length
+            "abc",                  // payload
+            "\\n"
+        ));
+        let mut proc_rx = channel.cast_tx.subscribe();
+
+        handle(channel, None).await.ok();
+        let output = proc_rx.recv().await.ok();
+
+        assert_eq!(output, Some(Message::text("abc").to(2)));
     }
 
     #[tokio::test]
     async fn test_handle_process_input() {
-        let process = create_process("scalesocket head -- -n 1");
-        let mut proc_rx = process.cast_tx.subscribe();
-        let sock_tx = process.tx.clone();
+        let channel = create_channel("scalesocket head -- -n 1");
+        let mut proc_rx = channel.cast_tx.subscribe();
+        let sock_tx = channel.tx.clone();
 
         let send = async {
-            sock_tx.send("foo\n".into()).ok();
+            sock_tx.send(Message::text("foo\n")).ok();
             Ok(())
         };
-        let handle = handle(process, None);
+        let handle = handle(channel, None);
 
         tokio::try_join!(handle, send).ok();
         let output = proc_rx.recv().await.ok();
 
-        assert_eq!(output, Some(Message::text("foo")));
+        assert_eq!(output, Some(Message::text("foo").broadcast()));
     }
 }

@@ -1,9 +1,10 @@
 use crate::{
     error::{AppError, AppResult},
-    types::{FromProcessRx, ToProcessTx},
+    message::serialize,
+    types::{ConnID, Framing, FromProcessRx, ToProcessTx},
 };
+
 use {
-    bytes::Bytes,
     futures::{future::ready, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
     sender_sink::wrappers::UnboundedSenderSink,
     std::sync::Arc,
@@ -17,6 +18,8 @@ use {
 #[instrument(parent = None, name = "connection", skip_all)]
 pub async fn handle(
     ws: WebSocket,
+    conn: ConnID,
+    framing: Option<Framing>,
     proc_rx: FromProcessRx,
     proc_tx: ToProcessTx,
     barrier: Option<Arc<Barrier>>,
@@ -27,18 +30,29 @@ pub async fn handle(
 
     // forward process to socket
     let proc_to_sock = proc_rx
-        .filter_map(|line| async { line.ok().map(Ok).or(None) })
+        .filter_map(|line| ready(line.ok()))
+        .filter_map(|(id, msg)| {
+            ready(match id {
+                // message is routed to us
+                Some(id) if id == conn => Some(msg),
+                // message is not routed to us
+                Some(_) => None,
+                // message is broadcast
+                None => Some(msg),
+            })
+        })
+        .map(Ok)
         .forward(sock_tx);
 
     // forward socket to process, until closed
     let sock_to_proc = {
         let proc_tx_sink = UnboundedSenderSink::from(proc_tx.clone());
-
         async move {
             // forward until close message from client
             let result = sock_rx
                 .try_take_while(|msg| ready(Ok(!msg.is_close())))
-                .filter_map(|data| ready(data.map(|msg| Ok(Bytes::from(msg.into_bytes()))).ok()))
+                .filter_map(|line| ready(line.ok()))
+                .map(|msg| serialize(msg, conn, framing))
                 .forward(proc_tx_sink)
                 .await;
 
@@ -78,7 +92,7 @@ pub async fn handle(
             _ => unreachable!(),
         }
     }
-    tracing::debug! { "connection handler done" };
+    tracing::debug! { id = conn, "connection handler done" };
 
     Ok(())
 }
