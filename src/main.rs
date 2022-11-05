@@ -14,6 +14,9 @@ mod signal;
 mod types;
 mod utils;
 
+#[macro_use]
+extern crate num_derive;
+
 use crate::{cli::Config, logging::setup_logging, metrics::Metrics, types::Event};
 
 use {
