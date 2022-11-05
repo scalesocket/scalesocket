@@ -147,6 +147,19 @@ mod tests {
         let (result, _, _, _) = parse_binary_header(&payload);
         assert_eq!(result, Some(123));
     }
+
+    #[test]
+    fn test_parse_id_0_is_broadcast() {
+        let payload = [
+            (0 as u32).to_le_bytes(),
+            (0 as u32).to_le_bytes(),
+            (0 as u32).to_le_bytes(),
+        ]
+        .concat();
+        let (result, _, _, _) = parse_binary_header(&payload);
+        assert_eq!(result, None);
+    }
+
     #[test]
     fn test_parse_type() {
         let payload = [
