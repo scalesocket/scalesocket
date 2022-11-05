@@ -262,6 +262,24 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_handle_process_output_framed_binary() {
+        let process = create_process(concat!(
+            "scalesocket --frame printf -- ",
+            "\\002\\000\\000\\000", // id
+            "\\001\\000\\000\\000", // type
+            "\\003\\000\\000\\000", // payload length
+            "abc",                  // payload
+            "\\n"
+        ));
+        let mut proc_rx = process.cast_tx.subscribe();
+
+        handle(process, None).await.ok();
+        let output = proc_rx.recv().await.ok();
+
+        assert_eq!(output, Some(Message::text("abc").to(2)));
+    }
+
+    #[tokio::test]
     async fn test_handle_process_input() {
         let process = create_process("scalesocket head -- -n 1");
         let mut proc_rx = process.cast_tx.subscribe();

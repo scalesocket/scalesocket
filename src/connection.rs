@@ -1,6 +1,6 @@
 use crate::{
     error::{AppError, AppResult},
-    message::encode,
+    message::serialize,
     types::{ConnID, Framing, FromProcessRx, ToProcessTx},
 };
 
@@ -33,9 +33,9 @@ pub async fn handle(
         .filter_map(|line| ready(line.ok()))
         .filter_map(|(id, msg)| {
             ready(match id {
-                // message is to us
+                // message is routed to us
                 Some(id) if id == conn => Some(msg),
-                // message is not to us
+                // message is not routed to us
                 Some(_) => None,
                 // message is broadcast
                 None => Some(msg),
@@ -52,7 +52,7 @@ pub async fn handle(
             let result = sock_rx
                 .try_take_while(|msg| ready(Ok(!msg.is_close())))
                 .filter_map(|line| ready(line.ok()))
-                .map(|msg| encode(msg, conn, framing))
+                .map(|msg| serialize(msg, conn, framing))
                 .forward(proc_tx_sink)
                 .await;
 

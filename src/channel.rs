@@ -2,7 +2,7 @@ use crate::{
     cli::Config,
     envvars::CGIEnv,
     error::{AppError, AppResult},
-    message::{decode, Address},
+    message::{deserialize, Address},
     types::{Framing, FromProcessTx, PortID, ShutdownRx, ShutdownTx, ToProcessRx, ToProcessTx},
     utils::run,
 };
@@ -69,14 +69,14 @@ impl Channel {
     }
 
     pub fn write_sock(&mut self, msg: Bytes) {
-        let id: Option<usize> = decode(&msg, self.framing);
-
-        if self.is_binary {
-            let _ = self.cast_tx.send(Message::binary(msg).to_some(id));
-        } else {
-            let msg = std::str::from_utf8(&msg).unwrap_or_default();
-            let _ = self.cast_tx.send(Message::text(msg).to_some(id));
-        };
+        if let Ok((id, payload)) = deserialize(&msg, self.framing) {
+            if self.is_binary {
+                let _ = self.cast_tx.send(Message::binary(payload).to_some(id));
+            } else {
+                let msg = std::str::from_utf8(payload).unwrap_or_default();
+                let _ = self.cast_tx.send(Message::text(msg).to_some(id));
+            };
+        }
     }
 }
 
