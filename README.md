@@ -1,5 +1,7 @@
 # Scalesocket
 
+[![Crates.io](https://img.shields.io/crates/v/scalesocket.svg)](https://crates.io/crates/scalesocket)
+
 *Scalesocket* is a websocket server and autoscaler.
 
 ## Features
