@@ -31,31 +31,29 @@ pub fn deserialize(
     framing: Option<Framing>,
 ) -> Result<(Option<ConnID>, &[u8]), &'static str> {
     match framing {
-        Some(mode) => {
-            match mode {
-                Framing::Binary => {
-                    let (id, msg_type, length, payload) = parse_binary_header(msg);
-                    let effective_len = payload.len();
-                    let header_len = length as usize;
+        Some(mode) => match mode {
+            Framing::Binary => {
+                let (id, msg_type, length, payload) = parse_binary_header(msg);
+                let effective_len = payload.len();
+                let header_len = length as usize;
 
-                    assert_eq!(
-                        effective_len, header_len as usize,
-                        "Message length {} does not match {}: Chunked payloads are not supported",
-                        effective_len, header_len
-                    );
+                assert_eq!(
+                    effective_len, header_len as usize,
+                    "Message length {} does not match {}: Chunked payloads are not supported",
+                    effective_len, header_len
+                );
 
-                    match msg_type {
-                        Some(Type::Binary) => Ok((id, payload)),
-                        Some(Type::Text) => Ok((id, payload)),
-                        None => Err("Unknown message type"),
-                    }
-                }
-                Framing::JSON => {
-                    let (id, msg) = parse_json_header(msg);
-                    Ok((id, msg))
+                match msg_type {
+                    Some(Type::Binary) => Ok((id, payload)),
+                    Some(Type::Text) => Ok((id, payload)),
+                    None => Err("Unknown message type"),
                 }
             }
-        }
+            Framing::JSON => {
+                let (id, msg) = parse_json_header(msg);
+                Ok((id, msg))
+            }
+        },
         None => Ok((None, msg)),
     }
 }
