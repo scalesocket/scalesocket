@@ -1,5 +1,5 @@
 use crate::types::Framing;
-use {clap::Parser, std::net::SocketAddr, std::ops::Range, std::path::PathBuf};
+use {clap::{ArgAction, Parser}, std::net::SocketAddr, std::ops::Range, std::path::PathBuf};
 
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about, long_about = None)]
@@ -67,7 +67,7 @@ pub struct Config {
     pub stats: bool,
 
     /// Port range for TCP
-    #[clap(long, parse(try_from_str = parse_ports), value_name = "START:END", default_value = "9001:9999")]
+    #[clap(long, value_parser = parse_ports, value_name = "START:END", default_value = "9001:9999")]
     pub tcpports: Range<u16>,
 
     /// Connect to child using TCP instead of stdio. Use PORT to bind
@@ -75,8 +75,8 @@ pub struct Config {
     pub tcp: bool,
 
     /// Increase level of verbosity
-    #[clap(short, parse(from_occurrences))]
-    pub verbosity: usize,
+    #[clap(short, action = ArgAction::Count)]
+    pub verbosity: u8,
 
     /// Delay before attaching to child [default: 1 for --tcp]
     #[clap(
