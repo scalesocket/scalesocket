@@ -75,7 +75,7 @@ pub fn openmetrics(
         .and(warp::get())
         .map(move || {
             // Encode metrics
-            let mut buffer = Vec::new();
+            let mut buffer = String::new();
             let res = match *registry {
                 Some(ref registry) => encode(&mut buffer, registry),
                 // Unreachable, since registry.is_some()
@@ -83,7 +83,7 @@ pub fn openmetrics(
             };
 
             let encoded = match res.is_ok() {
-                true => String::from_utf8(buffer).ok(),
+                true => Some(buffer),
                 false => None,
             };
 
@@ -138,7 +138,7 @@ mod tests {
         registry.register(
             "example_metric",
             "Example description",
-            Box::new(Family::<(), Counter>::default()),
+            Family::<(), Counter>::default(),
         );
         let api = openmetrics(Some(registry), true);
 

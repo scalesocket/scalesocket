@@ -17,7 +17,7 @@ futures = "0.3.26"
 id-pool = { version = "0.2.2", default-features = false, features = ["u16"] }
 num-traits = "0.2"
 num-derive = "0.3"
-prometheus-client = "0.18.1"
+prometheus-client = "0.19.0"
 sender-sink = "0.2.0"
 serde_json = "1.0.93"
 thiserror = "1.0.38"

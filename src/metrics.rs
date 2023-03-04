@@ -1,11 +1,11 @@
 use crate::types::RoomID;
 use {
-    prometheus_client::encoding::text::Encode, prometheus_client::metrics::counter::Counter,
-    prometheus_client::metrics::family::Family, prometheus_client::metrics::gauge::Gauge,
+    prometheus_client::encoding::EncodeLabelSet,
+    prometheus_client::metrics::{counter::Counter, family::Family, gauge::Gauge},
     prometheus_client::registry::Registry,
 };
 
-#[derive(Clone, Hash, PartialEq, Eq, Encode)]
+#[derive(Clone, Hash, PartialEq, Eq, EncodeLabelSet, Debug)]
 pub struct Labels {
     room: RoomID,
 }
@@ -25,12 +25,12 @@ impl Metrics {
             registry.register(
                 "scalesocket_websocket_connections_total",
                 "Number of total websocket connections",
-                Box::new(ws_connections_counter.clone()),
+                ws_connections_counter.clone(),
             );
             registry.register(
                 "scalesocket_websocket_connections_open",
                 "number of open websocket connections",
-                Box::new(ws_connections_open_gauge.clone()),
+                ws_connections_open_gauge.clone(),
             );
         }
 
