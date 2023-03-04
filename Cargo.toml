@@ -23,6 +23,7 @@ serde_json = "1.0.93"
 thiserror = "1.0.38"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json"] }
+trycmd = "0.14.13"
 tokio = { version = "1.26.0", features = ["full", "tracing"] }
 tokio-stream = { version = "0.1.12", features = ["sync", "net", "io-util"] }
 tokio-util = { version = "0.7.7", features = ["io"] }
