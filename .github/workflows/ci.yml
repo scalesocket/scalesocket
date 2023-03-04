@@ -30,7 +30,8 @@ jobs:
         with:
           cache-on-failure: "true"
       - name: Build and Test
-        run: cargo test --no-run --all-features
+        run: cargo test --all-features
+
   rustfmt:
     name: rustfmt
     runs-on: ubuntu-latest
