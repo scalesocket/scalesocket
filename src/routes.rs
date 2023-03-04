@@ -37,7 +37,7 @@ pub fn handle(
     .1
 }
 
-pub fn socket(tx: EventTx) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+pub fn socket(tx: EventTx) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
     warp::path!(String)
         .and(warp::path::end())
         .and(warp::ws())
@@ -56,7 +56,7 @@ pub fn socket(tx: EventTx) -> impl Filter<Extract = impl Reply, Error = Rejectio
         })
 }
 
-pub fn health() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+pub fn health() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
     warp::path("health")
         .and(warp::path::end())
         .and(warp::get())
@@ -66,7 +66,7 @@ pub fn health() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone 
 pub fn openmetrics(
     registry: Option<Registry>,
     enabled: bool,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
     let registry = std::sync::Arc::new(registry);
 
     warpext::enable_if(enabled)
@@ -78,8 +78,7 @@ pub fn openmetrics(
             let mut buffer = String::new();
             let res = match *registry {
                 Some(ref registry) => encode(&mut buffer, registry),
-                // Unreachable, since registry.is_some()
-                None => unreachable!(),
+                None => unreachable!("Registry should always be Some"),
             };
 
             let encoded = match res.is_ok() {
@@ -101,7 +100,7 @@ pub fn openmetrics(
 pub fn stats(
     metrics: Metrics,
     enabled: bool,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
     warpext::enable_if(enabled)
         .and(warp::path!(String / "stats").and(warp::path::end()))
         .map(move |room: RoomID| warp::reply::json(&metrics.get_room(room)))
@@ -109,7 +108,7 @@ pub fn stats(
 
 pub fn files(
     path: Option<PathBuf>,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
     warpext::enable_if(path.is_some()).and(warp::fs::dir(path.unwrap_or_default()))
 }
 

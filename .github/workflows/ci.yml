@@ -1,0 +1,52 @@
+name: ci
+on:
+  pull_request:
+    paths:
+      - "**"
+      - "!/*.md"
+      - "!/LICENSE"
+  push:
+    branches:
+      - main
+    paths:
+      - "**"
+      - "!/*.md"
+      - "!/LICENSE"
+  schedule:
+    - cron: "5 5 5 * *"
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: "true"
+      - name: Build and Test
+        run: cargo test --all-features
+
+  rustfmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          override: true
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Check formatting
+        run: cargo fmt --all -- --check
