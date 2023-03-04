@@ -3,7 +3,17 @@
 [![Build status](https://github.com/scalesocket/scalesocket/actions/workflows/ci.yml/badge.svg)](https://github.com/scalesocket/scalesocket/actions)
 [![Crates.io](https://img.shields.io/crates/v/scalesocket.svg)](https://crates.io/crates/scalesocket)
 
-*Scalesocket* is a websocket server and autoscaler.
+> *Scalesocket* is a websocket server and autoscaler. It is an easy way to build multiplayer backends.
+
+
+## About
+
+Scalesocket enables you to wrap a script or binary, and serve it over a websocket. Clients then connect to rooms at `wss://example.com/exampleroom`. Connecting to a room spawns a new process of the wrapped binary. Subsequent connections to the same room share the process.
+
+For full details, see the [documentation](https://www.scalesocket.org/docs.html).
+
+![High level architecture diagram](https://www.scalesocket.org/assets/diagram.svg)
+
 
 ## Features
 
@@ -16,6 +26,39 @@
 
 
 ## Usage
+
+Create the file `example.sh` with the follow content:
+```console,ignore
+#!/bin/bash
+echo '{"message": "hello world"}'
+sleep 1
+```
+
+Make it executable:
+```console,ignore
+$ chmod u+x example.sh
+```
+
+Wrap it by starting the scalesocket server:
+```console,ignore
+$ scalesocket --frame=json example.sh
+```
+
+Then connect to the websocket endpoint, for example using curl:
+```console,ignore
+$ curl --include \
+       --no-buffer \
+       --http1.1 \
+       --header "Connection: Upgrade" \
+       --header "Upgrade: websocket" \
+       --header "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
+       --header "Sec-WebSocket-Version: 13" \
+       http://localhost:9000/exampleroom
+�{"message": "hello world"}�{"message": "goodbye"}%
+```
+
+
+## Command line arguments
 
 ```console
 $ scalesocket --help
