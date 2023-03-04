@@ -30,6 +30,7 @@ pub enum Event {
 }
 
 #[derive(Debug, clap::ValueEnum, Clone, Copy)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum Framing {
     JSON,
     Binary,

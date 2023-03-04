@@ -23,7 +23,7 @@ pub fn run(
 ) -> Command {
     // Combine filtered environment with external variables
     let env: HashMap<String, String> = env::vars()
-        .filter(|&(ref k, _)| env_allowlist.contains(k))
+        .filter(|(k, _)| env_allowlist.contains(k))
         .chain(env_extra)
         .collect();
 
@@ -45,7 +45,7 @@ pub fn exit_code<T>(status: Result<ExitStatus, T>) -> Option<i32> {
     status.ok().and_then(|s| s.code()).or(None)
 }
 
-// utility filters for warp
+/// Utility filters for Warp
 pub mod warpext {
     use crate::envvars::{CGIEnv, Env};
     use std::collections::HashMap;

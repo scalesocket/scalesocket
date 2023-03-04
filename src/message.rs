@@ -38,7 +38,7 @@ pub fn deserialize(
                 let header_len = length as usize;
 
                 assert_eq!(
-                    effective_len, header_len as usize,
+                    effective_len, header_len,
                     "Message length {} does not match {}: Chunked payloads are not supported",
                     effective_len, header_len
                 );

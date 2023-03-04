@@ -1,5 +1,10 @@
 use crate::types::Framing;
-use {clap::{ArgAction, Parser}, std::net::SocketAddr, std::ops::Range, std::path::PathBuf};
+use {
+    clap::{ArgAction, Parser},
+    std::net::SocketAddr,
+    std::ops::Range,
+    std::path::PathBuf,
+};
 
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about, long_about = None)]
