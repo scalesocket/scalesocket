@@ -1,5 +1,6 @@
 # Scalesocket
 
+[![Build status](https://github.com/scalesocket/scalesocket/actions/workflows/ci.yml/badge.svg)](https://github.com/scalesocket/scalesocket/actions)
 [![Crates.io](https://img.shields.io/crates/v/scalesocket.svg)](https://crates.io/crates/scalesocket)
 
 *Scalesocket* is a websocket server and autoscaler.
