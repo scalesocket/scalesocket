@@ -13,7 +13,6 @@ Scalesocket enables you to wrap a script or binary, and serve it over websockets
 For full details, see the [documentation](https://www.scalesocket.org/docs.html).
 
 
-
 ## Features
 
 * Share a backend process between websocket clients
@@ -42,7 +41,7 @@ $ chmod u+x example.sh
 
 Wrap it by starting the ScaleSocket server:
 ```console,ignore
-$ scalesocket --frame=json ./example.sh
+$ scalesocket ./example.sh
 ```
 
 Then connect to the websocket endpoint, for example using curl:
@@ -115,6 +114,9 @@ OPTIONS:
 
         --metrics
             Expose OpenMetrics endpoint at /metrics
+
+        --oneshot
+            Serve only once
 
         --passenv <LIST>
             List of envvars to pass to child
