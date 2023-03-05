@@ -39,7 +39,7 @@ async fn main() {
 
     tracing::info! { "listening at {}", config.addr };
 
-    let handle_events = events::handle(tx.clone(), rx, config.clone(), mtr.clone()).unit_error();
+    let handle_events = events::handle(tx.clone(), rx, config.clone(), mtr.clone());
     let handle_routes = routes::handle(tx, config, routes_shutdown_rx, mtr, registry).unit_error();
     let handle_signal = signal::handle(routes_shutdown_tx, events_shutdown_tx).unit_error();
 
@@ -51,7 +51,6 @@ mod tests {
     use clap::Parser;
     use futures::{FutureExt, StreamExt};
     use prometheus_client::registry::Registry;
-    use tokio::time::{sleep, Duration};
     use warp::test::WsClient;
 
     use super::routes;
@@ -115,7 +114,7 @@ mod tests {
     #[tokio::test]
     async fn stdio_e2e_echo() {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
-        let config = create_config("scalesocket echo -- hello");
+        let config = create_config("scalesocket --oneshot echo -- hello");
         let metrics = create_metrics();
         let mut received_messages: Vec<String> = Vec::new();
         let mut client = Client::connect("/example", tx.clone()).await;
@@ -126,16 +125,10 @@ mod tests {
             while let Some(msg) = stream.next().await {
                 received_messages.push(msg.unwrap_or_default());
             }
-            Ok(())
-        };
-        let shutdown = async {
-            sleep(Duration::from_millis(250)).await;
-            tx.send(Event::Shutdown).ok();
-            Ok(())
         };
         let handle = events::handle(tx.clone(), rx, config, metrics);
 
-        let _ = tokio::try_join!(handle, shutdown, inspect);
+        let _ = tokio::join!(handle, inspect);
         assert_eq!(received_messages, vec!["hello"]);
     }
 }

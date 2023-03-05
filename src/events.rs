@@ -36,11 +36,15 @@ pub async fn handle(
     mut rx: EventRx,
     config: Config,
     metrics: Metrics,
-) -> AppResult<()> {
+) -> Result<(), ()> {
+    let is_oneshot = config.oneshot;
     let mut state = State::new(config);
 
     while let Some(event) = rx.recv().await {
         match event {
+            Event::Connect { room, ws, .. } if state.procs.contains_key(&room) && is_oneshot => {
+                let _ = ws.close().await;
+            }
             Event::Connect { room, ws, env } if state.procs.contains_key(&room) => {
                 metrics.inc_ws_connections(&room);
                 attach(room, env, ws, &tx, &mut state, None);
@@ -56,17 +60,28 @@ pub async fn handle(
             Event::Disconnect { room, conn, env } => {
                 metrics.dec_ws_connections(&room);
                 disconnect(room, env, conn, &mut state);
+
+                if is_oneshot {
+                    break;
+                }
             }
             Event::ProcessExit { room, code, port } => {
                 exit(room, code, port, &mut state);
+
+                if is_oneshot {
+                    break;
+                }
             }
             Event::Shutdown => {
-                shutdown(state);
                 break;
             }
         }
     }
-    Ok(())
+
+    shutdown(state);
+
+    // Stop upon event handler termination
+    Err(())
 }
 
 impl State {

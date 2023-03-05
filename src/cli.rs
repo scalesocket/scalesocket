@@ -33,6 +33,10 @@ pub struct Config {
     #[clap(long, action)]
     pub metrics: bool,
 
+    /// Serve only once.
+    #[clap(long)]
+    pub oneshot: bool,
+
     /// List of envvars to pass to child
     #[clap(
         long,
