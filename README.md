@@ -8,16 +8,15 @@
 
 ## About
 
-Scalesocket enables you to wrap a script or binary, and serve it over a websocket. Clients then connect to rooms at `wss://example.com/exampleroom`. Connecting to a room spawns a new process of the wrapped binary. Subsequent connections to the same room share the process.
+Scalesocket enables you to wrap a script or binary, and serve it over websockets. Clients then connect to *rooms* at `wss://example.com/exampleroom`. Connecting to a room spawns a new process of the wrapped binary. Subsequent connections to the same room share the process.
 
 For full details, see the [documentation](https://www.scalesocket.org/docs.html).
 
-![High level architecture diagram](https://www.scalesocket.org/assets/diagram.svg)
 
 
 ## Features
 
-* Share a backend process between clients
+* Share a backend process between websocket clients
 * Proxy websocket traffic to normal TCP socket or stdio
 * Route server messages to specific clients
 * Serve static files
@@ -32,6 +31,8 @@ Create the file `example.sh` with the follow content:
 #!/bin/bash
 echo '{"message": "hello world"}'
 sleep 1
+echo '{"message": "goodbye"}'
+sleep 1
 ```
 
 Make it executable:
@@ -39,9 +40,9 @@ Make it executable:
 $ chmod u+x example.sh
 ```
 
-Wrap it by starting the scalesocket server:
+Wrap it by starting the ScaleSocket server:
 ```console,ignore
-$ scalesocket --frame=json example.sh
+$ scalesocket --frame=json ./example.sh
 ```
 
 Then connect to the websocket endpoint, for example using curl:
