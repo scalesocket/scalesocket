@@ -62,7 +62,7 @@ $ curl --include \
 
 ```console
 $ scalesocket --help
-scalesocket 0.1.2
+scalesocket 0.1.3
 A websocket server and autoscaler
 
 USAGE:
