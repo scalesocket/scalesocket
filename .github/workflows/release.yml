@@ -18,7 +18,8 @@ jobs:
     steps:
       - uses: actions/checkout@master
       - name: Build and release
-        uses: rust-build/rust-build.action@master
+        # https://github.com/rust-build/rust-build.action/issues/62
+        uses: rust-build/rust-build.action@1.4.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
