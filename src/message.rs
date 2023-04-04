@@ -7,21 +7,21 @@ use {bytes::Bytes, sender_sink::wrappers::SinkError, warp::ws::Message};
 
 /// An extension trait for `Message`s that provides routing helpers
 pub trait Address<T> {
-    fn to(self, to: usize) -> (Option<usize>, T);
-    fn to_some(self, to: Option<usize>) -> (Option<usize>, Message);
-    fn broadcast(self) -> (Option<usize>, T);
+    fn to(self, to: ConnID) -> (Option<ConnID>, T);
+    fn to_some(self, to: Option<ConnID>) -> (Option<ConnID>, Message);
+    fn broadcast(self) -> (Option<ConnID>, T);
 }
 
 impl Address<Message> for Message {
-    fn to(self, to: usize) -> (Option<usize>, Message) {
+    fn to(self, to: ConnID) -> (Option<ConnID>, Message) {
         (Some(to), self)
     }
 
-    fn to_some(self, to: Option<usize>) -> (Option<usize>, Message) {
+    fn to_some(self, to: Option<ConnID>) -> (Option<ConnID>, Message) {
         (to, self)
     }
 
-    fn broadcast(self) -> (Option<usize>, Message) {
+    fn broadcast(self) -> (Option<ConnID>, Message) {
         (None, self)
     }
 }
@@ -96,7 +96,7 @@ pub fn parse_json_header(msg: &Bytes) -> (Option<ConnID>, &[u8]) {
         Ok(ref payload) => payload
             .get("id")
             .and_then(|v: &Value| v.as_u64())
-            .and_then(|v: u64| usize::try_from(v).ok()),
+            .and_then(|v: u64| u32::try_from(v).ok()),
         _ => None,
     };
     (id, msg)
@@ -110,7 +110,7 @@ pub fn parse_binary_header(data: &[u8]) -> (Option<ConnID>, Option<Type>, u32, &
     let mut id_data = [0; 4];
     id_data.copy_from_slice(&data[0..4]);
 
-    let id = usize::try_from(u32::from_le_bytes(id_data)).expect("u32 to fit in usize");
+    let id = u32::from_le_bytes(id_data);
     let id = match id {
         // message is broadcast
         0 => None,

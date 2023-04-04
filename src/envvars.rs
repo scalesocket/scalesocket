@@ -1,3 +1,4 @@
+use crate::types::ConnID;
 use {std::collections::HashMap, std::net::SocketAddr, urlencoding::encode};
 
 #[derive(Clone, Debug, Default)]
@@ -38,7 +39,7 @@ impl From<CGIEnv> for HashMap<String, String> {
     }
 }
 
-pub fn replace_template_env(template: &str, conn: usize, env: &Env) -> String {
+pub fn replace_template_env(template: &str, conn: ConnID, env: &Env) -> String {
     let template = template.replace("#ID", &conn.to_string());
 
     let cgi_vars = env.cgi.clone().into();

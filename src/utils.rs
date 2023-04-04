@@ -3,12 +3,12 @@ use {
     std::collections::HashMap,
     std::env,
     std::process::{ExitStatus, Stdio},
-    std::sync::atomic::{AtomicUsize, Ordering},
+    std::sync::atomic::{AtomicU32, Ordering},
     tokio::process::Command,
 };
 
 /// Our global unique connection id counter.
-static NEXT_CONNECTION_ID: AtomicUsize = AtomicUsize::new(1);
+static NEXT_CONNECTION_ID: AtomicU32 = AtomicU32::new(1);
 
 pub fn new_conn_id() -> ConnID {
     NEXT_CONNECTION_ID.fetch_add(1, Ordering::Relaxed)
