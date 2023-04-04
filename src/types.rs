@@ -6,7 +6,7 @@ use {
 };
 
 pub type RoomID = String;
-pub type ConnID = usize;
+pub type ConnID = u32;
 pub type PortID = u16;
 
 #[derive(Debug)]

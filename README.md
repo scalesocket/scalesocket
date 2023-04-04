@@ -90,8 +90,8 @@ OPTIONS:
         --frame[=<MODE>...]
             Enable framing and routing for messages
             
-            Client messages are amended with ID header. Server messages with optional client ID
-            routed to clients.
+            Client messages are amended with ID header (u32). Server messages with optional client
+            ID are routed to clients.
             
             When set to `json` messages are parsed as JSON. Client messages are amended with an "id"
             field. Server messages are routed to clients based an optional "id" field. When set to
