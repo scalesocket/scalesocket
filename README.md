@@ -128,6 +128,8 @@ OPTIONS:
 
         --stats
             Expose stats endpoint at /<ROOM>/stats
+            
+            Exposed statistics can be queried individually at  /<ROOM>/stats/<STATISTIC>
 
         --tcp
             Connect to child using TCP instead of stdio. Use PORT to bind
