@@ -90,7 +90,7 @@ pub type ShutdownTx = oneshot::Sender<()>;
 pub type ShutdownRx = oneshot::Receiver<()>;
 pub type ShutdownRxStream = futures::future::IntoStream<ShutdownRx>;
 
-// Channel for passing data to from child process
+// Channel for passing data from child process
 pub type FromProcessTx = broadcast::Sender<(Option<ConnID>, Message)>;
 pub type FromProcessRx = broadcast::Receiver<(Option<ConnID>, Message)>;
 
