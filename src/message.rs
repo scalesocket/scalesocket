@@ -1,6 +1,6 @@
 use serde_json::Value;
 
-use crate::types::{ConnID, Framing};
+use crate::types::{ConnID, Frame};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use {bytes::Bytes, sender_sink::wrappers::SinkError, warp::ws::Message};
@@ -28,11 +28,11 @@ impl Address<Message> for Message {
 
 pub fn deserialize(
     msg: &Bytes,
-    framing: Option<Framing>,
+    frame: Option<Frame>,
 ) -> Result<(Option<ConnID>, &[u8]), &'static str> {
-    match framing {
-        Some(mode) => match mode {
-            Framing::Binary => {
+    match frame {
+        Some(f) => match f {
+            Frame::Binary => {
                 let (id, msg_type, length, payload) = parse_binary_header(msg);
                 let effective_len = payload.len();
                 let header_len = length as usize;
@@ -49,7 +49,7 @@ pub fn deserialize(
                     None => Err("Unknown message type"),
                 }
             }
-            Framing::JSON => {
+            Frame::JSON => {
                 let (id, msg) = parse_json_header(msg);
                 Ok((id, msg))
             }
@@ -58,15 +58,11 @@ pub fn deserialize(
     }
 }
 
-pub fn serialize(
-    msg: Message,
-    conn: ConnID,
-    framing: Option<Framing>,
-) -> Result<Message, SinkError> {
-    match framing {
-        Some(mode) => match mode {
-            Framing::Binary => todo!(),
-            Framing::JSON => match serde_json::from_slice::<Value>(msg.as_bytes()) {
+pub fn serialize(msg: Message, conn: ConnID, frame: Option<Frame>) -> Result<Message, SinkError> {
+    match frame {
+        Some(f) => match f {
+            Frame::Binary => unimplemented!("Client side binary framing has not been implemented"),
+            Frame::JSON => match serde_json::from_slice::<Value>(msg.as_bytes()) {
                 Ok(mut v) if v.is_object() => {
                     v["id"] = Value::from(conn);
                     Ok(Message::text(v.to_string()))

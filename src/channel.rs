@@ -22,7 +22,7 @@ pub struct Channel {
     pub source: Option<Source>,
     pub is_binary: bool,
     pub attach_delay: Option<u64>,
-    pub framing: Option<Framing>,
+    pub framing: Framing,
     pub tx: ToProcessTx,
     pub rx: Option<ToProcessRx>,
     pub cast_tx: FromProcessTx,
@@ -61,7 +61,7 @@ impl Channel {
             source,
             is_binary: config.binary,
             attach_delay: config.cmd_attach_delay,
-            framing: config.frame,
+            framing: config.into(),
             tx,
             rx: Some(rx),
             cast_tx,
@@ -78,7 +78,7 @@ impl Channel {
     }
 
     pub fn write_sock(&mut self, msg: Bytes) {
-        if let Ok((id, payload)) = deserialize(&msg, self.framing) {
+        if let Ok((id, payload)) = deserialize(&msg, self.framing.process_to_socket()) {
             if self.is_binary {
                 let _ = self.cast_tx.send(Message::binary(payload).to_some(id));
             } else {
