@@ -1,4 +1,4 @@
-use crate::envvars::Env;
+use crate::{cli::Config, envvars::Env};
 use {
     tokio::sync::{broadcast, mpsc, oneshot},
     tokio_stream::wrappers::UnboundedReceiverStream,
@@ -29,9 +29,49 @@ pub enum Event {
     Shutdown,
 }
 
+/// Composite type for incoming and outgoing framing
+#[derive(Debug, Clone, Copy)]
+pub enum Framing {
+    None,
+    /// Common framing for incoming and outgoing messages
+    Symmetric(Frame),
+    /// Independent framing for incoming and outgoing messages
+    Asymmetric(Option<Frame>, Option<Frame>),
+}
+
+impl Framing {
+    pub fn socket_to_process(&self) -> Option<Frame> {
+        match self {
+            Framing::None => None,
+            Framing::Symmetric(f) => Some(*f),
+            Framing::Asymmetric(f, _) => *f,
+        }
+    }
+
+    pub fn process_to_socket(&self) -> Option<Frame> {
+        match self {
+            Framing::None => None,
+            Framing::Symmetric(f) => Some(*f),
+            Framing::Asymmetric(_, f) => *f,
+        }
+    }
+}
+
+impl From<&Config> for Framing {
+    fn from(cfg: &Config) -> Self {
+        if cfg.server_frame.is_some() || cfg.client_frame.is_some() {
+            return Self::Asymmetric(cfg.client_frame, cfg.server_frame);
+        }
+        if let Some(frame) = cfg.frame {
+            return Self::Symmetric(frame);
+        }
+        Self::None
+    }
+}
+
 #[derive(Debug, clap::ValueEnum, Clone, Copy)]
 #[allow(clippy::upper_case_acronyms)]
-pub enum Framing {
+pub enum Frame {
     JSON,
     Binary,
 }

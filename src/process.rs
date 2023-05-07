@@ -262,6 +262,17 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_handle_process_output_server_framed_json() {
+        let channel = create_channel(r#"scalesocket --server-frame=json echo -- {"id": 0}"#);
+        let mut proc_rx = channel.cast_tx.subscribe();
+
+        handle(channel, None).await.ok();
+        let output = proc_rx.recv().await.ok();
+
+        assert_eq!(output, Some(Message::text("{\"id\": 0}").to(0)));
+    }
+
+    #[tokio::test]
     async fn test_handle_process_output_framed_binary() {
         let channel = create_channel(concat!(
             "scalesocket --frame printf -- ",
@@ -295,5 +306,51 @@ mod tests {
         let output = proc_rx.recv().await.ok();
 
         assert_eq!(output, Some(Message::text("foo").broadcast()));
+    }
+
+    #[tokio::test]
+    async fn test_handle_process_input_framed_json() {
+        let channel = create_channel("scalesocket --frame=json head -- -n 1");
+        let mut proc_rx = channel.cast_tx.subscribe();
+        let sock_tx = channel.tx.clone();
+
+        let send = async {
+            sock_tx
+                .send(Message::text("{'id': 1, 'msg': 'foo'}\n"))
+                .ok();
+            Ok(())
+        };
+        let handle = handle(channel, None);
+
+        tokio::try_join!(handle, send).ok();
+        let output = proc_rx.recv().await.ok();
+
+        assert_eq!(
+            output,
+            Some(Message::text("{'id': 1, 'msg': 'foo'}").broadcast())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_process_input_client_framed_json() {
+        let channel = create_channel("scalesocket --client-frame=json head -- -n 1");
+        let mut proc_rx = channel.cast_tx.subscribe();
+        let sock_tx = channel.tx.clone();
+
+        let send = async {
+            sock_tx
+                .send(Message::text("{'id': 1, 'msg': 'foo'}\n"))
+                .ok();
+            Ok(())
+        };
+        let handle = handle(channel, None);
+
+        tokio::try_join!(handle, send).ok();
+        let output = proc_rx.recv().await.ok();
+
+        assert_eq!(
+            output,
+            Some(Message::text("{'id': 1, 'msg': 'foo'}").broadcast())
+        );
     }
 }

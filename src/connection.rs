@@ -19,7 +19,7 @@ use {
 pub async fn handle(
     ws: WebSocket,
     conn: ConnID,
-    framing: Option<Framing>,
+    framing: Framing,
     proc_rx: FromProcessRx,
     proc_tx: ToProcessTx,
     barrier: Option<Arc<Barrier>>,
@@ -52,7 +52,7 @@ pub async fn handle(
             let result = sock_rx
                 .try_take_while(|msg| ready(Ok(!msg.is_close())))
                 .filter_map(|line| ready(line.ok()))
-                .map(|msg| serialize(msg, conn, framing))
+                .map(|msg| serialize(msg, conn, framing.socket_to_process()))
                 .forward(proc_tx_sink)
                 .await;
 

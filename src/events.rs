@@ -105,7 +105,7 @@ fn attach(
     barrier: Option<Arc<Barrier>>,
 ) {
     let conn = new_conn_id();
-    let mode = state.cfg.frame;
+    let framing = (&state.cfg).into();
 
     // Get process senders from map
     let (proc_tx_broadcast, proc_tx, _) = state.procs.get(&room).expect("room not in process map");
@@ -143,7 +143,7 @@ fn attach(
     };
 
     tokio::spawn(
-        connection::handle(*ws, conn, mode, proc_rx, proc_tx.clone(), barrier)
+        connection::handle(*ws, conn, framing, proc_rx, proc_tx.clone(), barrier)
             .then({
                 // NOTE: we invoke on_init closure immediately...
                 on_init();
