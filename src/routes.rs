@@ -101,9 +101,22 @@ pub fn stats(
     metrics: Metrics,
     enabled: bool,
 ) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
-    warpext::enable_if(enabled)
-        .and(warp::path!(String / "stats").and(warp::path::end()))
-        .map(move |room: RoomID| warp::reply::json(&metrics.get_room(room)))
+    let metric = warp::path::param::<String>()
+        .map(Some)
+        .or_else(|_| async { Ok::<(Option<String>,), std::convert::Infallible>((None,)) });
+
+    warpext::enable_if(enabled).and(
+        warp::path!(String / "stats" / ..)
+            .and(metric)
+            .and(warp::path::end())
+            .and(warp::get())
+            .map(
+                move |room: RoomID, metric: Option<String>| match metric.as_deref() {
+                    Some("connections") => warp::reply::json(&metrics.get_room_connections(room)),
+                    _ => warp::reply::json(&metrics.get_room(room)),
+                },
+            ),
+    )
 }
 
 pub fn files(
@@ -151,7 +164,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn stats_returns_stats() {
+    async fn stats_returns_all_statistics() {
         let metrics = Metrics::new(&mut None);
         metrics.inc_ws_connections("foo");
         metrics.inc_ws_connections("bar");
@@ -162,5 +175,23 @@ mod tests {
 
         assert_eq!(resp.status(), StatusCode::OK);
         assert_eq!(resp.body(), "{\"connections\":1}");
+    }
+
+    #[tokio::test]
+    async fn stats_metric_returns_single_statistic() {
+        let metrics = Metrics::new(&mut None);
+        metrics.inc_ws_connections("foo");
+        metrics.inc_ws_connections("bar");
+
+        let api = stats(metrics, true);
+
+        let resp = request()
+            .method("GET")
+            .path("/foo/stats/connections")
+            .reply(&api)
+            .await;
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(resp.body(), "1");
     }
 }

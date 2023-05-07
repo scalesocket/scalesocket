@@ -72,6 +72,9 @@ pub struct Config {
     pub staticdir: Option<PathBuf>,
 
     /// Expose stats endpoint at /<ROOM>/stats
+    ///
+    /// Exposed statistics can be queried individually at  /<ROOM>/stats/<STATISTIC>
+    ///
     #[clap(long, action)]
     pub stats: bool,
 
