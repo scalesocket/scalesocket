@@ -32,7 +32,7 @@ jobs:
         with:
           cache-on-failure: "true"
       - name: Build and Test
-        run: cargo test --all-features
+        run: cargo test --all-features --locked
 
   rustfmt:
     name: rustfmt
