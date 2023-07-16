@@ -1,0 +1,19 @@
+---
+- heading: Manual
+  items:
+  - label: About
+    href: README.md
+  - label: Installation
+    href: installation.md
+  # - label: Quick Start
+  #   href: README.md#quick-start
+  - label: Features
+    href: features.md
+  - label: Alternatives
+    href: comparison.md
+  - label: Examples
+    external: https://github.com/scalesocket/website/tree/main/examples
+- heading: Reference
+  items:
+  - label: Command Line Arguments
+    href: cli.md

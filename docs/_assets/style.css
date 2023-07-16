@@ -1,0 +1,11 @@
+img[src*="badge.svg"] {
+    display: inline-block;
+    margin: 0 !important;
+    display: none;
+}
+
+img[src*="scalesocket.svg"] {
+    display: inline-block;
+    margin: 0 !important;
+    display: none;
+}

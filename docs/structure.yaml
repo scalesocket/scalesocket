@@ -1,0 +1,7 @@
+tabs:
+  - label: Manual
+    subtabs:
+      - label: Manual
+        path: /man/
+  - label: GitHub
+    external: https://github.com/scalesocket/scalesocket

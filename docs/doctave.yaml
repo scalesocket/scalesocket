@@ -1,0 +1,9 @@
+---
+title: ScaleSocket
+logo:
+  src: _assets/image.svg
+colors:
+  main: "#0d9488"
+styles:
+  - _assets/landing.css
+  - _assets/style.css
