@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="625" height="130" viewBox="0 0 625 130" xml:space="preserve">
+<g transform="matrix(1 0 0 1 65 65)"  >
+<linearGradient id="SVGID_3566" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1 0 0 1 -65 -65)"  x1="19.5" y1="19.5" x2="110.5" y2="110.5">
+<stop offset="0%" style="stop-color:rgba(80, 255, 164, 1);"/>
+<stop offset="100%" style="stop-color:rgba(13, 148, 136, 1);"/>
+</linearGradient>
+<circle style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: url(#SVGID_3566); fill-rule: nonzero; opacity: 1;"  cx="0" cy="0" r="65" />
+</g>
+<g transform="matrix(0.3 -0.49 0.49 0.3 53 42)"  >
+<linearGradient id="SVGID_3951" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1 0 0 1 0 0)"  x1="3.4771653000000002" y1="58.2488183" x2="112.4283447" y2="19.703936700000003">
+<stop offset="0%" style="stop-color:rgba(250, 250, 250, 1);"/>
+<stop offset="100%" style="stop-color:rgba(150, 255, 256, 1);"/>
+</linearGradient>
+<path style="stroke: rgb(42,43,255); stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: url(#SVGID_3951); fill-rule: nonzero; opacity: 1;"  transform=" translate(-57.95, -28.98)" d="m 0 57.952755 l 0 0 c 0 -32.006424 25.946333 -57.952755 57.952755 -57.952755 c 32.006428 0 57.952755 25.946333 57.952755 57.952755 l -28.97638 0 c 0 -16.003212 -12.97316 -28.976377 -28.976376 -28.976377 c -16.003212 0 -28.976377 12.9731655 -28.976377 28.976377 z" stroke-linecap="round" />
+</g>
+<g transform="matrix(-0.28 0.5 -0.5 -0.28 75 85.08)"  >
+<linearGradient id="SVGID_4440" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1 0 0 1 0 0)"  x1="0" y1="58.9763775" x2="115.90551" y2="28.9763775">
+<stop offset="0%" style="stop-color:rgba(246, 246, 246, 1);"/>
+<stop offset="100%" style="stop-color:rgba(150, 255, 256,  1);"/>
+</linearGradient>
+<path style="stroke: rgb(42,43,255); stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: url(#SVGID_4440); fill-rule: nonzero; opacity: 1;"  transform=" translate(-57.95, -28.98)" d="m 0 57.952755 l 0 0 c 0 -32.006424 25.946333 -57.952755 57.952755 -57.952755 c 32.006428 0 57.952755 25.946333 57.952755 57.952755 l -28.97638 0 c 0 -16.003212 -12.97316 -28.976377 -28.976376 -28.976377 c -16.003212 0 -28.976377 12.9731655 -28.976377 28.976377 z" stroke-linecap="round" />
+</g>
+<text x="170" y="95" fill="rgb(51 65 85)" style="font-size: 5em;letter-spacing: -0.025em;font-weight: bold;line-height: 1.75em;font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont;">Scale</text>
+<text x="365" y="95" fill="rgb(51 65 85)" style="font-size: 5em;letter-spacing: -0.025em;line-height: 1.75em;font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont;">Socket</text>
+</svg>

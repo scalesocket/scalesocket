@@ -48,7 +48,7 @@ pub struct Config {
 
     /// Enable framing and routing for all messages
     ///
-    /// Client messages are amended with ID header (u32). Server messages with optional client ID are routed to clients.
+    /// Client messages are tagged with an ID header (u32). Server messages with optional client ID are routed to clients.
     ///
     /// When set to `json` messages are parsed as JSON. Client messages are amended with an "id" field. Server messages are routed to clients based an optional "id" field.
     /// When set to `binary` messages are parsed according to gwsocket's strict mode.
