@@ -22,6 +22,6 @@
 </linearGradient>
 <path style="stroke: rgb(42,43,255); stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: url(#SVGID_4440); fill-rule: nonzero; opacity: 1;"  transform=" translate(-57.95, -28.98)" d="m 0 57.952755 l 0 0 c 0 -32.006424 25.946333 -57.952755 57.952755 -57.952755 c 32.006428 0 57.952755 25.946333 57.952755 57.952755 l -28.97638 0 c 0 -16.003212 -12.97316 -28.976377 -28.976376 -28.976377 c -16.003212 0 -28.976377 12.9731655 -28.976377 28.976377 z" stroke-linecap="round" />
 </g>
-<text x="170" y="95" fill="rgb(51 65 85)" style="font-size: 5em;letter-spacing: -0.025em;font-weight: bold;line-height: 1.75em;font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont;">Scale</text>
-<text x="365" y="95" fill="rgb(51 65 85)" style="font-size: 5em;letter-spacing: -0.025em;line-height: 1.75em;font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont;">Socket</text>
+<text x="170" y="95" fill="rgb(241 245 249)" style="font-size: 5em;letter-spacing: -0.025em;font-weight: bold;line-height: 1.75em;font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont;">Scale</text>
+<text x="365" y="95" fill="rgb(241 245 249)" style="font-size: 5em;letter-spacing: -0.025em;line-height: 1.75em;font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont;">Socket</text>
 </svg>
