@@ -12,6 +12,8 @@ ScaleSocket lets you to wrap a script or binary, and serve it over websockets. C
 
 For full details, see the [documentation](https://www.scalesocket.org/docs.html).
 
+![High level architecture diagram on ScaleSocket usage](https://github.com/scalesocket/scalesocket/blob/main/docs/_assets/diagram.svg?raw=true)
+
 
 ## Features
 
