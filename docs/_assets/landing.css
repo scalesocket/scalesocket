@@ -19,10 +19,6 @@
   line-height: 1.75rem;
 }
 
-.hero .cta {
-  background-color: rgb(14 165 233 / var(--tw-bg-opacity));
-}
-
 .hero .links {
   width: 100%;
   display: flex;
@@ -58,11 +54,11 @@
   background-color: #3b436e;
 }
 
-.hero .links a:link {
+.hero .links a:link, .hero .links a:visited  {
   color: white;
 }
 
-.dark .hero .links a:link {
+.dark .hero .links a:link, .dark .hero .links a:visited {
   color: #f1f1f1;
 }
 

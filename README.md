@@ -10,7 +10,7 @@
 
 ScaleSocket lets you to wrap a script or binary, and serve it over websockets. Clients then connect to *rooms* at `wss://example.com/exampleroom`. Connecting to a room spawns a new process of the wrapped binary. Subsequent connections to the same room share the process.
 
-For full details, see the [documentation](https://www.scalesocket.org/docs.html).
+For full details, see the [documentation](https://www.scalesocket.org/man/).
 
 ![High level architecture diagram on ScaleSocket usage](https://github.com/scalesocket/scalesocket/blob/main/docs/_assets/diagram.svg?raw=true)
 
