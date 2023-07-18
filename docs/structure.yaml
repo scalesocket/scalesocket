@@ -1,4 +1,8 @@
 tabs:
+  - label: Home
+    subtabs:
+      - label: Home
+        path: /
   - label: Manual
     subtabs:
       - label: Manual
