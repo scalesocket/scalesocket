@@ -76,6 +76,11 @@
   color: #14b8a6 !important;
 }
 
+html.dark .content-markdown h1,
+html.dark .content-markdown h2 {
+  color: #2dd4bf !important;
+}
+
 .content-markdown h3,
 .content-markdown h4 {
   color: #0891b2 !important;
