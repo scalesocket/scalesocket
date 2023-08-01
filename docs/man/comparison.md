@@ -3,7 +3,8 @@ hide_side_table_of_contents: true
 ---
 # Alternatives
 
-A comparison of tools offering similar functionality. The table highlights which tools support bidirectional communication with a shared backend.
+A comparison of tools offering similar functionality.
+The table highlights which tools support bidirectional communication with a shared backend instance.
 
 |                                                Application|Language|Spawn Technology|Channels|Production ready|Bidirectional connection|Shared backend|Usecase|
 |:----|:----|:----|:----|:----|:----|:----|:----|

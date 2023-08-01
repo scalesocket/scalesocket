@@ -2,7 +2,8 @@
 
 ## Wrapping a Binary or Script
 
-The command to spawn the target is specified as the argument to the `scalesocket` command. The target can be a script or a binary. 
+The command to spawn the target is specified as the argument to the `scalesocket` command.
+The target can be a script or a binary.
 
 ```console
 $ scalesocket ./example.sh
@@ -18,7 +19,8 @@ $ scalesocket ./example.sh -- --arg1 --arg2
 
 ### STDIO and TCP Modes
 
-By default, incoming websocket messages are written to the target's *stdin*. The target's *stdout* is sent back to the websocket client.
+By default, incoming websocket messages are written to the target's *stdin*.
+The target's *stdout* is sent back to the websocket client.
 Alternatively, the messages can be sent to the target using TCP.
 
 See the [CLI Reference](/man/cli.md) and the `--tcp`, `--tcpports` and `--cmd-attach-delay` arguments for details.

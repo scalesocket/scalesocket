@@ -3,16 +3,21 @@
 [![Build status](https://github.com/scalesocket/scalesocket/actions/workflows/ci.yml/badge.svg)](https://github.com/scalesocket/scalesocket/actions)
 [![Crates.io](https://img.shields.io/crates/v/scalesocket.svg)](https://crates.io/crates/scalesocket)
 
-> *Scalesocket* is a websocket server and autoscaler. It is an easy way to build multiplayer backends.
+*Scalesocket* is a websocket server and autoscaler. It's a simple way to build multiplayer backends.
+
+![High level architecture diagram on ScaleSocket usage](https://github.com/scalesocket/scalesocket/blob/main/docs/_assets/diagram.svg?raw=true)
 
 
 ## About
 
-ScaleSocket lets you to wrap a script or binary, and serve it over websockets. Clients then connect to *rooms* at `wss://example.com/exampleroom`. Connecting to a room spawns a new process of the wrapped binary. Subsequent connections to the same room share the process.
+ScaleSocket lets you to wrap a script or binary, and serve it over websockets.
+Clients then connect to *rooms* at `wss://example.com/exampleroom`.
+Connecting to a room spawns a new process of the wrapped binary.
+Subsequent connections to the same room share the process.
 
-For full details, see the [documentation](https://www.scalesocket.org/man/).
+## Documentation
 
-![High level architecture diagram on ScaleSocket usage](https://github.com/scalesocket/scalesocket/blob/main/docs/_assets/diagram.svg?raw=true)
+For full details and installation instructions, see the [documentation](https://www.scalesocket.org/man/).
 
 
 ## Features
