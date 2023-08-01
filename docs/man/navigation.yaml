@@ -11,7 +11,11 @@
     href: usage.md
   - label: Alternatives
     href: comparison.md
-  - label: Examples
+- heading: Examples
+  items:
+  - label: Simple Chat
+    href: examples/chat.md
+  - label: More Examples
     external: https://github.com/scalesocket/website/tree/main/examples
 - heading: Reference
   items:
