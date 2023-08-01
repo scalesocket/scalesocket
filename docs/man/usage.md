@@ -55,13 +55,35 @@ See the [CLI Reference](/man/cli.md) and the `--frame`, `--server-frame` and `--
 
 ## Join and Leave Messages
 
-ScaleSocket can optionally send a message to the target when a client joins or leaves a room. An `#ID` placeholder will be replaced with the client's ID.
+ScaleSocket can optionally send a message to the target when a client joins or leaves a room.
+
+The messages support the variables:
+* `#ID` eg. `123`
+* The [Environment variables](#environment-variables)
+
+For example, starting scalesocket with:
 
 ```console
-$ scalesocket --frame=json --joinmsg '{"t":"Join","id":#ID}' --leavemsg '{"t":"Leave"}' ./example.sh
+$ scalesocket --joinmsg '{"type":"Join","id":#ID}' --leavemsg '{"type":"Leave"}' ./example.sh
 ```
 
+Makes a new connection send the message `{"type":"Join","id":123}` to the server. This is useful for keeping track of connected clients.
+
+
 See the [CLI Reference](/man/cli.md) and the `--joinmsg` and `--leavemsg` arguments for details.
+
+## Environment Variables
+
+ScaleSocket can optionally expose CGI [environment variables](https://www.rfc-editor.org/rfc/rfc3875.html) to the target.
+
+
+The supported environment variables are:
+* `QUERY_STRING` eg. `foo=bar&baz=qux`
+* `REMOTE_ADDR` eg. `127.0.0.1:1234`
+* `QUERY_PARAM_XYZ` for each query parameter, `?xyz=`, in the connection URL.
+* Any environment variables specified with `--passenv`
+
+See the [CLI Reference](/man/cli.md) and the `--passenv` argument for details.
 
 ## Metrics Endpoint
 
