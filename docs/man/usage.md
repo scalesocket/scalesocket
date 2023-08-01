@@ -21,17 +21,18 @@ $ scalesocket ./example.sh -- --arg1 --arg2
 
 By default, incoming websocket messages are written to the target's *stdin*.
 The target's *stdout* is sent back to the websocket client.
-Alternatively, the messages can be sent to the target using TCP.
+Alternatively, the messages can be sent to the target over a TCP socket.
+
+When using TCP mode, the target must be configured to bind to the port specified by the environment variable `PORT`.
 
 See the [CLI Reference](/man/cli.md) and the `--tcp`, `--tcpports` and `--cmd-attach-delay` arguments for details.
 
 ## Rooms
 
-Clients connecting to the server specify a room in the connection URL.
+Clients connecting to the server specify a room in the connection URL path.
+The room ID is the first path component of the URL. For example `wss://example.com/exampleroom`.
 
 Connecting to a room spawns a new process of the wrapped binary or script. Subsequent connections to the same room share the same process.
-
-The room ID is the first path component of the URL. For example `wss://example.com/exampleroom`.
 
 ## Framing and Routing Messages
 
@@ -67,7 +68,7 @@ For example, starting scalesocket with:
 $ scalesocket --joinmsg '{"type":"Join","id":#ID}' --leavemsg '{"type":"Leave"}' ./example.sh
 ```
 
-Makes a new connection send the message `{"type":"Join","id":123}` to the server. This is useful for keeping track of connected clients.
+Sends the message `{"type":"Join","id":123}` to the server when a new client joins. This is useful for keeping track of connected clients.
 
 
 See the [CLI Reference](/man/cli.md) and the `--joinmsg` and `--leavemsg` arguments for details.
@@ -81,11 +82,14 @@ The supported environment variables are:
 * `QUERY_STRING` eg. `foo=bar&baz=qux`
 * `REMOTE_ADDR` eg. `127.0.0.1:1234`
 * `QUERY_PARAM_XYZ` for each query parameter, `?xyz=`, in the connection URL.
+* `PORT` for binding in TCP mode
 * Any environment variables specified with `--passenv`
 
 See the [CLI Reference](/man/cli.md) and the `--passenv` argument for details.
 
-## Metrics Endpoint
+## Endpoints
+
+### Metrics Endpoint
 
 ScaleSocket can expose an [OpenMetrics](https://openmetrics.io/) and [Prometheus](https://prometheus.io/) compatible endpoint for scraping metrics.
 
@@ -95,11 +99,15 @@ The tracked metrics are:
 
 See the [CLI Reference](/man/cli.md) and the `--metrics` flag for details.
 
-## Stats Endpoint
+### Stats Endpoint
 
 ScaleSocket can expose a JSON endpoint for retrieving stats for rooms.
 
 See the [CLI Reference](/man/cli.md) and the `--stats` flag for details.
+
+### Health Endpoint
+
+ScaleSocket exposes a standard `/health` endpoint for checking readiness.
 
 ## Static File Hosting
 
