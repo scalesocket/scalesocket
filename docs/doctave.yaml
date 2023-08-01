@@ -3,6 +3,8 @@ title: ScaleSocket
 logo:
   src: _assets/image.svg
   src_dark: _assets/image_dark.svg
+favicon:
+  src: "_assets/favicon.ico"
 colors:
   main: "#0d9488"
   main_dark: "#2dd4bf"
