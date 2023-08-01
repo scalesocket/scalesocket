@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>Chat Demo</title>
+    <style>
+        body { background-color: #e2e8f0; font-family: Arial, Helvetica, sans-serif; margin: 0; }
+        #chat { display: flex; flex-direction: column; margin: 0 auto; }
+        #banner { text-align: center; margin: 1rem; }
+        #messages { background-color: #f1f5f9; overflow-x: scroll; padding: 1rem; }
+        #message { display: flex; flex-direction: row; }
+        .input-rounded { display: flex; border: 0; padding: 0.25rem; margin: 0.5rem; border-radius: 0.75rem; }
+        .grow { flex-grow: 1; }
+        .fullscreen { height: 100vh; max-width: 48rem; }
+    </style>
+</head>
+
+<body>
+    <div id="chat" class="fullscreen">
+        <div id="banner">
+            <select onchange="this.options[this.selectedIndex].value && (window.location.hash = this.options[this.selectedIndex].value) && window.location.reload();">
+                <option value="#default" selected>Pick a Room</option>
+                <option value="#room1">Room 1</option>
+                <option value="#room2">Room 2</option>
+                <option value="#room3">Room 3</option>
+            </select>
+        </div>
+        <div id="messages" class="grow"></div>
+        <div id="message">
+            <input name="nick" placeholder="nick" class="input-rounded" value="anonymous" />
+            <input name="message" placeholder="message..." class="input-rounded grow" />
+        </div>
+    </div>
+    <script>
+        const $ = document.querySelector.bind(document);
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const room = window.location.hash.substr(1) || "default";
+
+        // connect to websocket server and room based on URL
+        const ws = new WebSocket(`${protocol}:${window.location.host}/${room}`);
+
+        const sendMessage = (text) => {
+            // send outgoing message
+            const nick = $("input[name=nick]").value || "anonymous";
+            ws.send(JSON.stringify({ nick, text }));
+        }
+
+        const recvMessage = (message) => {
+            // handle incoming message
+            const el = $("#messages")
+            el.appendChild(document.createTextNode(`<${message.nick}> ${message.text}`));
+            el.appendChild(document.createElement('br'));
+            el.scrollTop = el.scrollHeight;
+        }
+
+        const init = () => {
+            // set websocket listener
+            ws.addEventListener('message', (ev) => {
+                const message = JSON.parse(ev.data);
+                recvMessage(message);
+            });
+
+            // set input listener
+            $("input[name=message]").addEventListener('keyup', ({ key, target }) => {
+                if (key === 'Enter') {
+                    sendMessage(target.value);
+                    target.value = "";
+                    target.focus();
+                }
+            });
+
+            // set input focus
+            $("input[name=message]").focus();
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

@@ -20,7 +20,7 @@ ScaleSocket lets you to wrap a script or binary, and serve it over websockets. C
 <div class="links">
 
 [Quick Start](/man/README.md#quick-start)
-[Download](/man/installation.md)
+[Installation](/man/installation.md)
 
 </div>
 
@@ -52,8 +52,10 @@ $ scalesocket --addr 0.0.0.0:5000 ./example.py
 
 {% include "_partials/window.md" content: shell, title: "", class: "terminal" %}
 
-Now clients can connect to rooms at `ws://localhost:5000/<room id>`. Sent messages within a room will be echoed to all participants.
+A websocket server is now running.
+Clients can connect to rooms at `ws://localhost:5000/<room id>`.
+In this example, messages sent by the server will be forwarded to all participants in the room.
 
-*This saves us from implementing lobby and room management logic. In fact, it also saves us from implementing any netcode at all for the backend.*
+This saves us from implementing lobby and room management logic. In fact, it also saves us from implementing any netcode at all for the backend.
 
-For more advanced usage and features, see [features](/man/features.md).
+For more advanced usage and features, see [usage](/man/usage.md).

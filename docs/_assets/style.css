@@ -9,3 +9,11 @@ img[src*="scalesocket.svg"] {
     margin: 0 !important;
     display: none;
 }
+
+.header-tabs > div:first-child {
+    display: none;
+}
+
+.header-tabs > div:nth-child(2) {
+    margin-left: 0 !important;
+}

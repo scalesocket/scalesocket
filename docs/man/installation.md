@@ -21,7 +21,7 @@ cargo install --force scalesocket
 
 ## Binary release (linux)
 
-Binary releases are available for linux via [GitHub](https://github.com/scalesocket/scalesocket/releases), or using the command line:
+Binary releases are available for linux via [GitHub](https://github.com/scalesocket/scalesocket/releases) or using the command line:
 
 ```shell
 $ VERSION=v0.1.4 curl -SL "https://github.com/scalesocket/scalesocket/releases/download/${VERSION}/scalesocket_${VERSION}_x86_64-unknown-linux-musl.tar.gz" | tar -xzC /usr/bin

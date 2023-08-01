@@ -1,17 +1,21 @@
 ---
 - heading: Manual
   items:
-  - label: About
+  - label: Introduction
     href: README.md
   - label: Installation
     href: installation.md
-  # - label: Quick Start
-  #   href: README.md#quick-start
-  - label: Features
-    href: features.md
+  - label: Quick Start
+    href: README.md#quick-start
+  - label: Usage
+    href: usage.md
   - label: Alternatives
     href: comparison.md
-  - label: Examples
+- heading: Examples
+  items:
+  - label: Simple Chat
+    href: examples/chat.md
+  - label: More Examples
     external: https://github.com/scalesocket/website/tree/main/examples
 - heading: Reference
   items:
