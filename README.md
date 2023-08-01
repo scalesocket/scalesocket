@@ -64,4 +64,4 @@ $ curl --include \
 �{"message": "hello world"}�{"message": "goodbye"}%
 ```
 
-For more advanced usage and features, see [features](/man/features.md).
+For more advanced usage and features, see [usage](/man/usage.md).

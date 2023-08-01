@@ -58,4 +58,4 @@ In this example, messages sent by the server will be forwarded to all participan
 
 This saves us from implementing lobby and room management logic. In fact, it also saves us from implementing any netcode at all for the backend.
 
-For more advanced usage, see [features](/man/features.md).
+For more advanced usage and features, see [usage](/man/usage.md).

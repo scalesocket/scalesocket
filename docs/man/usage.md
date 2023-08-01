@@ -1,4 +1,4 @@
-# Features
+# Usage
 
 ## Wrapping a Binary or Script
 
