@@ -6,6 +6,7 @@ title: Websocket chat example using ScaleSocket
 
 The most trivial example. A chat based on wrapping [cat(1)](https://linux.die.net/man/1/cat) without any backend code.
 
+➡ [View demo online](https://demo-chat.scalesocket.org)  
 ➡ [View full source on GitHub](https://github.com/scalesocket/scalesocket/tree/main/examples/chat)  
 ➡ [Run the example](#running-the-example)
 

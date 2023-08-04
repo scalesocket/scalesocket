@@ -6,6 +6,7 @@ title: Multipayer game example using ScaleSocket
 
 A simple example. An game that has a backend in Python and frontend in Javascript.
 
+➡ [View demo online](https://demo-multiplayer.scalesocket.org)  
 ➡ [View full source on GitHub](https://github.com/scalesocket/scalesocket/tree/main/examples/multiplayer)  
 ➡ [Run the example](#running-the-example)
 
