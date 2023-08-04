@@ -3,14 +3,14 @@ on:
   pull_request:
     paths:
       - "**"
-      - "!/*.md"
+      - "!/docs/**"
       - "!/LICENSE"
   push:
     branches:
       - main
     paths:
       - "**"
-      - "!/*.md"
+      - "!/docs/**"
       - "!/LICENSE"
   schedule:
     - cron: "5 5 5 * *"
