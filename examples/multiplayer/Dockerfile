@@ -12,4 +12,6 @@ CMD scalesocket --addr 0.0.0.0:5000\
     --frame=json \
     --joinmsg '{"t":"Join","id":#ID}'\
     --leavemsg '{"t":"Leave","id":#ID}'\
+    --stats\
+    --metrics\
     /app/game.py
