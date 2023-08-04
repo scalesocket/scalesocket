@@ -2,9 +2,12 @@
 title: Websocket chat example using ScaleSocket
 ---
 
-# Chat Example (javascript)
+# Chat Example in Javascript
 
-The most basic example. A chat based on wrapping [cat(1)](https://linux.die.net/man/1/cat) without any backend code.
+The most trivial example. A chat based on wrapping [cat(1)](https://linux.die.net/man/1/cat) without any backend code.
+
+➡ [View full source on GitHub](https://github.com/scalesocket/scalesocket/tree/main/examples/chat)  
+➡ [Run the example](#running-the-example)
 
 ## Running the example
 
@@ -18,27 +21,30 @@ docker compose up --build chat
 
 Then open `http://localhost:5000/` in your browser.
 
-## Frontend
+## Frontend code
 
-The frontend is a single html file with some javascript. It connects with websockets to the backend and shows a chat interface.
+The frontend is a single html file, `index.html`, with some javascript. It connects with websockets to the backend and shows a chat interface.
 
 ```html
 {% include "_partials/examples/chat/index.html" %}
 ```
 
-## Backend
+## Backend code
 
 There is no backend code. The backend is a wrapped `cat` process.
 
-We want to:
+## Backend server
 
+The backend is the ScaleSocket server.
+
+We want to:
+* let participants join rooms based on URL
 * start a new `cat` process when a new user connects
 * host a static html file
 
-To do this, start scalesocket using:
+To do this, start ScaleSocket using:
 
 ```shell
-scalesocket cat
 scalesocket --addr 0.0.0.0:5000\
     --staticdir /var/www/public/\
     --frame=json\
