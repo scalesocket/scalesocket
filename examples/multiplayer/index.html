@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Multiplayer Game Example using ScaleSocket</title>
+    <meta charset="utf-8" />
+    <script src="https://pixijs.download/v7.0.0/pixi.min.js"></script>
+    <script type="module" src="./game.js"></script>
+    <style>
+        body { background-color: #e2e8f0; font-family: Arial, Helvetica, sans-serif; margin: 0; }
+        #game{ display: flex; flex-direction: column; margin: 0 auto; }
+        #banner { text-align: center; margin: 1rem; }
+        #content { text-align: center; }
+        #canvas { height: 100%; max-height: 100%; width: 100%; max-width: 100%; }
+    </style>
+
+</head>
+
+<body>
+    <div id="game" class="fullscreen">
+        <div id="banner">
+            <select
+                onchange="this.options[this.selectedIndex].value && (window.location.hash = this.options[this.selectedIndex].value) && window.location.reload();">
+                <option value="#default" selected>Pick a Room</option>
+                <option value="#room1">Room 1</option>
+                <option value="#room2">Room 2</option>
+                <option value="#room3">Room 3</option>
+            </select>
+            <p>Multiplayer game, try tapping around and opening multiple instances</p>
+        </div>
+        <div id="content">
+            <canvas id="canvas" class="h-full max-h-full w-full max-w-full"></canvas>
+        </div>
+    </div>
+    <script type="module">
+        import { Game } from "./game.js";
+        const $ = document.querySelector.bind(document);
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const room = window.location.hash.substr(1) || "default";
+
+        const app = new PIXI.Application({
+            width: 480, height: 480, autoDensity: true,
+            view: $('#canvas'),
+            backgroundColor: 0xffffff
+        });
+
+        PIXI.Assets.addBundle('default', { 'bunny': 'bunny.png' });
+
+        void PIXI.Assets.loadBundle('default').then(async (resources) => {
+            // connect to websocket server and room based on URL
+            const ws = new WebSocket(`${protocol}:${window.location.host}/${room}`);
+            // start the game
+            const game = new Game(app, ws, resources);
+            await game.init();
+        });
+
+    </script>
+</body>
+
+</html>
