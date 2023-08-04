@@ -9,3 +9,12 @@ services:
     volumes:
       - ./chat/:/var/www/public
       - ./chat/:/app/
+
+  multiplayer:
+    build:
+      context: multiplayer/
+    volumes:
+      - ./multiplayer/:/var/www/public
+      - ./multiplayer/:/app/
+    ports:
+      - "5000:5000"
