@@ -51,7 +51,7 @@ pub fn socket(tx: EventTx) -> impl Filter<Extract = (impl Reply,), Error = Rejec
         .and(warp::path::end())
         .and(warp::ws())
         .and(warpext::env())
-        .map(move |room: RoomID, websocket: Ws, mut env: Env| {
+        .map(move |room: RoomID, websocket: Ws, env: Env| {
             let tx = tx.clone();
             websocket.on_upgrade(move |ws| {
                 let event = Event::Connect {

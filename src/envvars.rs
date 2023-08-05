@@ -7,24 +7,32 @@ pub struct Env {
     pub query: HashMap<String, String>,
 }
 
+impl Env {
+    pub fn set_room(&mut self, room: &str) -> &mut Self {
+        self.cgi.room = room.to_string();
+        self
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct CGIEnv {
     /// URL-encoded search or parameter string
     query_string: String,
     /// network address of the client sending the request
     remote_addr: String,
+    /// room name (non standard)
+    room: String,
 }
 
 impl CGIEnv {
     pub fn from_filter(query_string: Option<String>, remote_addr: Option<SocketAddr>) -> Self {
         let query_string = query_string.unwrap_or_default();
-        let remote_addr = remote_addr
-            .map(|a| a.to_string())
-            .unwrap_or_else(|| "".to_string());
+        let remote_addr = remote_addr.map(|a| a.to_string()).unwrap_or_default();
 
         Self {
             query_string,
             remote_addr,
+            ..Default::default()
         }
     }
 }
@@ -35,6 +43,7 @@ impl From<CGIEnv> for HashMap<String, String> {
             // NOTE: implicit uppercase
             ("QUERY_STRING".to_string(), env.query_string),
             ("REMOTE_ADDR".to_string(), env.remote_addr),
+            ("ROOM".to_string(), env.room),
         ])
     }
 }
@@ -93,6 +102,7 @@ mod tests {
         CGIEnv {
             query_string: "foo=".to_string(),
             remote_addr: "127.0.0.1:1234".to_string(),
+            room: "room".to_string(),
         }
     }
 

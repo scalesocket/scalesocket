@@ -215,7 +215,6 @@ mod tests {
         handle(channel, None).await.ok();
         let output = BroadcastStream::new(proc_rx)
             .filter_map(|d| async { d.ok() })
-            .take(2)
             .collect::<Vec<_>>()
             .await;
 
@@ -224,6 +223,7 @@ mod tests {
             vec![
                 Message::text("QUERY_STRING=").broadcast(),
                 Message::text("REMOTE_ADDR=").broadcast(),
+                Message::text("ROOM=").broadcast(),
             ]
         );
     }

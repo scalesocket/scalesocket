@@ -63,6 +63,7 @@ ScaleSocket can optionally send a message to the target when a client joins or l
 
 The messages support the variables:
 * `#ID` eg. `123`
+* `QUERY_XYZ` for each query parameter, `?xyz=`, in the connection URL.
 * The [Environment variables](#environment-variables)
 
 For example, starting scalesocket with:
@@ -84,7 +85,7 @@ ScaleSocket can optionally expose CGI [environment variables](https://www.rfc-ed
 The supported environment variables are:
 * `QUERY_STRING` eg. `foo=bar&baz=qux`
 * `REMOTE_ADDR` eg. `127.0.0.1:1234`
-* `QUERY_PARAM_XYZ` for each query parameter, `?xyz=`, in the connection URL.
+* `ROOM` eg. `exampleroom`
 * `PORT` for binding in TCP mode
 * Any environment variables specified with `--passenv`
 
