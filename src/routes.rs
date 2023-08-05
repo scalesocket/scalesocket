@@ -10,6 +10,7 @@ use {
     prometheus_client::encoding::text::encode,
     prometheus_client::registry::Registry,
     serde_json::json,
+    std::collections::HashMap,
     std::path::PathBuf,
     warp::ws::Ws,
     warp::{self, http::Response, Filter, Rejection, Reply},
@@ -38,20 +39,28 @@ pub fn handle(
 }
 
 pub fn socket(tx: EventTx) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
-    warp::path!(String)
+    let room = warp::path::param::<String>()
+        .and(warp::query::query())
+        .and_then(async move |room, query: HashMap<String, String>| {
+            Ok::<_, Rejection>((query.get("room").unwrap_or(&room).to_owned(),))
+        })
+        .untuple_one();
+
+    warp::any()
+        .and(room)
         .and(warp::path::end())
         .and(warp::ws())
         .and(warpext::env())
-        .map(move |room: RoomID, websocket: Ws, env: Env| {
+        .map(move |room: RoomID, websocket: Ws, mut env: Env| {
             let tx = tx.clone();
             websocket.on_upgrade(move |ws| {
                 let event = Event::Connect {
+                    env,
                     ws: Box::new(ws),
                     room,
-                    env,
                 };
                 tx.send(event).expect("Failed to send Connect event");
-                async {}
+                futures::future::ready(())
             })
         })
 }
@@ -106,7 +115,7 @@ pub fn stats(
         .or_else(|_| async { Ok::<(Option<String>,), std::convert::Infallible>((None,)) });
 
     warpext::enable_if(enabled).and(
-        warp::path!(String / "stats" / ..)
+        warp::path!(RoomID / "stats" / ..)
             .and(metric)
             .and(warp::path::end())
             .and(warp::get())
@@ -173,7 +182,7 @@ mod tests {
 
         let resp = request().method("GET").path("/foo/stats").reply(&api).await;
 
-        assert_eq!(resp.status(), StatusCode::OK);
+        assert!(resp.status().is_success());
         assert_eq!(resp.body(), "{\"connections\":1}");
     }
 
@@ -191,7 +200,7 @@ mod tests {
             .reply(&api)
             .await;
 
-        assert_eq!(resp.status(), StatusCode::OK);
+        assert!(resp.status().is_success());
         assert_eq!(resp.body(), "1");
     }
 }

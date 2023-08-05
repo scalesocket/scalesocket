@@ -98,17 +98,31 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn socket_connect_event() {
+    async fn connects_to_room_from_path() {
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
-        Client::connect("/example", tx).await.send("hello").await;
+        Client::connect("/example", tx).await;
 
         let received_event = rx.recv().await.unwrap();
         let room = match received_event {
-            Event::Connect { room, .. } => Some(room),
+            Event::Connect { ref room, .. } => Some(room.as_str()),
             _ => None,
         };
 
-        assert_eq!(Some("example".to_string()), room);
+        assert_eq!(Some("example"), room);
+    }
+
+    #[tokio::test]
+    async fn connects_to_room_from_query() {
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
+        Client::connect("/example?room=other", tx).await;
+
+        let received_event = rx.recv().await.unwrap();
+        let room = match received_event {
+            Event::Connect { ref room, .. } => Some(room.as_str()),
+            _ => None,
+        };
+
+        assert_eq!(Some("other"), room);
     }
 
     #[tokio::test]
