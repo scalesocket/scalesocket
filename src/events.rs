@@ -156,7 +156,7 @@ fn attach(
 
 #[instrument(name = "spawn", skip(env, tx, state, barrier))]
 fn spawn(
-    room: &RoomID,
+    room: &str,
     env: &Env,
     tx: &EventTx,
     state: &mut State,
@@ -168,7 +168,7 @@ fn spawn(
         tracing::debug!("reserved port {}", port);
     }
 
-    let mut proc = Channel::new(&state.cfg, port, env.cgi.clone());
+    let mut proc = Channel::new(&state.cfg, port, env.cgi_env_with(room));
     let senders = proc.take_senders();
 
     let on_init = || {

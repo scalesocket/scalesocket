@@ -8,20 +8,34 @@ pub struct Env {
 }
 
 impl Env {
-    pub fn set_room(&mut self, room: &str) -> &mut Self {
-        self.cgi.room = room.to_string();
-        self
+    pub fn cgi_env_with(&self, room: &str) -> CGIEnv {
+        CGIEnv {
+            room: Some(room.to_string()),
+            ..self.cgi.clone()
+        }
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
+#[cfg_attr(not(test), derive(Default))]
 pub struct CGIEnv {
     /// URL-encoded search or parameter string
     query_string: String,
     /// network address of the client sending the request
     remote_addr: String,
     /// room name (non standard)
-    room: String,
+    room: Option<String>,
+}
+
+#[cfg(test)]
+impl Default for CGIEnv {
+    fn default() -> Self {
+        Self {
+            query_string: String::default(),
+            remote_addr: String::default(),
+            room: Some("".to_string()),
+        }
+    }
 }
 
 impl CGIEnv {
@@ -43,7 +57,7 @@ impl From<CGIEnv> for HashMap<String, String> {
             // NOTE: implicit uppercase
             ("QUERY_STRING".to_string(), env.query_string),
             ("REMOTE_ADDR".to_string(), env.remote_addr),
-            ("ROOM".to_string(), env.room),
+            ("ROOM".to_string(), env.room.expect("room to be defined")),
         ])
     }
 }
@@ -102,7 +116,7 @@ mod tests {
         CGIEnv {
             query_string: "foo=".to_string(),
             remote_addr: "127.0.0.1:1234".to_string(),
-            room: "room".to_string(),
+            room: "room".to_string().into(),
         }
     }
 
