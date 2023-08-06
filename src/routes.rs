@@ -10,7 +10,6 @@ use {
     prometheus_client::encoding::text::encode,
     prometheus_client::registry::Registry,
     serde_json::json,
-    std::collections::HashMap,
     std::path::PathBuf,
     warp::ws::Ws,
     warp::{self, http::Response, Filter, Rejection, Reply},
@@ -31,7 +30,8 @@ pub fn handle(
         socket(tx)
             .or(health())
             .or(openmetrics(registry, config.metrics))
-            .or(stats(metrics, config.stats))
+            .or(rooms_api(metrics.clone(), config.stats))
+            .or(stats_api(metrics, config.stats))
             .or(files(config.staticdir.clone())),
     )
     .bind_with_graceful_shutdown(config.addr, shutdown_rx)
@@ -39,26 +39,16 @@ pub fn handle(
 }
 
 pub fn socket(tx: EventTx) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
-    let room = warp::path::param::<String>()
-        .and(warp::query::query())
-        .and_then(async move |room, query: HashMap<String, String>| {
-            Ok::<_, Rejection>((query.get("room").unwrap_or(&room).to_owned(),))
-        })
-        .untuple_one();
-
     warp::any()
-        .and(room)
+        .and(warpext::path_or_query::param("room"))
         .and(warp::path::end())
         .and(warp::ws())
         .and(warpext::env())
         .map(move |room: RoomID, websocket: Ws, env: Env| {
             let tx = tx.clone();
             websocket.on_upgrade(move |ws| {
-                let event = Event::Connect {
-                    env,
-                    ws: Box::new(ws),
-                    room,
-                };
+                let ws = Box::new(ws);
+                let event = Event::Connect { env, room, ws };
                 tx.send(event).expect("Failed to send Connect event");
                 futures::future::ready(())
             })
@@ -106,7 +96,18 @@ pub fn openmetrics(
         })
 }
 
-pub fn stats(
+pub fn rooms_api(
+    metrics: Metrics,
+    enabled: bool,
+) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
+    warpext::enable_if(enabled)
+        .and(warp::path!("api" / "rooms"))
+        .and(warp::path::end())
+        .and(warp::get())
+        .map(move || warp::reply::json(&metrics.get_rooms()))
+}
+
+pub fn stats_api(
     metrics: Metrics,
     enabled: bool,
 ) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
@@ -114,18 +115,17 @@ pub fn stats(
         .map(Some)
         .or_else(|_| async { Ok::<(Option<String>,), std::convert::Infallible>((None,)) });
 
-    warpext::enable_if(enabled).and(
-        warp::path!(RoomID / "stats" / ..)
-            .and(metric)
-            .and(warp::path::end())
-            .and(warp::get())
-            .map(
-                move |room: RoomID, metric: Option<String>| match metric.as_deref() {
-                    Some("connections") => warp::reply::json(&metrics.get_room_connections(room)),
-                    _ => warp::reply::json(&metrics.get_room(room)),
-                },
-            ),
-    )
+    warpext::enable_if(enabled)
+        .and(warp::path!("api" / RoomID / ..))
+        .and(metric)
+        .and(warp::path::end())
+        .and(warp::get())
+        .map(
+            move |room: RoomID, metric: Option<String>| match metric.as_deref() {
+                Some("connections") => warp::reply::json(&metrics.get_room_connections(room)),
+                _ => warp::reply::json(&metrics.get_room(room)),
+            },
+        )
 }
 
 pub fn files(
@@ -142,6 +142,7 @@ mod tests {
     use warp::test::request;
 
     use super::*;
+    use serde_json::{self, Value};
 
     #[tokio::test]
     async fn health_returns_ok() {
@@ -173,30 +174,51 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn stats_returns_all_statistics() {
-        let metrics = Metrics::new(&mut None);
+    async fn room_api_returns_all_rooms() {
+        let metrics = Metrics::new(&mut None, true);
         metrics.inc_ws_connections("foo");
         metrics.inc_ws_connections("bar");
 
-        let api = stats(metrics, true);
-
-        let resp = request().method("GET").path("/foo/stats").reply(&api).await;
-
-        assert!(resp.status().is_success());
-        assert_eq!(resp.body(), "{\"connections\":1}");
-    }
-
-    #[tokio::test]
-    async fn stats_metric_returns_single_statistic() {
-        let metrics = Metrics::new(&mut None);
-        metrics.inc_ws_connections("foo");
-        metrics.inc_ws_connections("bar");
-
-        let api = stats(metrics, true);
+        let api = rooms_api(metrics, true);
 
         let resp = request()
             .method("GET")
-            .path("/foo/stats/connections")
+            .path("/api/rooms/")
+            .reply(&api)
+            .await;
+
+        assert!(resp.status().is_success());
+        let body: Vec<Value> = serde_json::from_slice(resp.body()).unwrap();
+        assert!(body.contains(&json!({"name": "foo", "connections": 1})));
+        assert!(body.contains(&json!({"name": "bar", "connections": 1})));
+    }
+
+    #[tokio::test]
+    async fn stats_api_returns_all_statistics() {
+        let metrics = Metrics::new(&mut None, true);
+        metrics.inc_ws_connections("foo");
+        metrics.inc_ws_connections("bar");
+
+        let api = stats_api(metrics, true);
+
+        let resp = request().method("GET").path("/api/foo/").reply(&api).await;
+
+        assert!(resp.status().is_success());
+        let body: Value = serde_json::from_slice(resp.body()).unwrap();
+        assert_eq!(body, json!({"name": "foo", "connections": 1}));
+    }
+
+    #[tokio::test]
+    async fn stats_api_returns_single_statistic() {
+        let metrics = Metrics::new(&mut None, true);
+        metrics.inc_ws_connections("foo");
+        metrics.inc_ws_connections("bar");
+
+        let api = stats_api(metrics, true);
+
+        let resp = request()
+            .method("GET")
+            .path("/api/foo/connections")
             .reply(&api)
             .await;
 

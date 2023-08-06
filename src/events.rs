@@ -66,6 +66,7 @@ pub async fn handle(
                 }
             }
             Event::ProcessExit { room, code, port } => {
+                metrics.clear(&room);
                 exit(room, code, port, &mut state);
 
                 if is_oneshot {

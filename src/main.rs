@@ -35,7 +35,7 @@ async fn main() {
     let events_shutdown_tx = tx.clone();
 
     let mut registry = config.metrics.then_some(<Registry>::default());
-    let mtr = Metrics::new(&mut registry);
+    let mtr = Metrics::new(&mut registry, config.stats);
 
     tracing::info! { "listening at {}", config.addr };
 
@@ -94,7 +94,7 @@ mod tests {
     }
 
     fn create_metrics() -> Metrics {
-        Metrics::new(&mut Some(<Registry>::default()))
+        Metrics::new(&mut Some(<Registry>::default()), true)
     }
 
     #[tokio::test]

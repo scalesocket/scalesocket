@@ -89,4 +89,20 @@ pub mod warpext {
             // deal with Ok(())
             .untuple_one()
     }
+
+    pub mod path_or_query {
+        use super::*;
+
+        pub fn param(
+            name: &'static str,
+        ) -> impl Filter<Extract = One<String>, Error = Rejection> + Copy {
+            warp::path::param::<String>()
+                .and(warp::query::query())
+                .and_then(async move |path, query: HashMap<String, String>| {
+                    Ok::<_, Rejection>((query.get(name).unwrap_or(&path).to_owned(),))
+                })
+                // deal with Ok(())
+                .untuple_one()
+        }
+    }
 }
