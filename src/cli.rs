@@ -99,12 +99,14 @@ pub struct Config {
     #[clap(long, value_parser, value_name = "DIR")]
     pub staticdir: Option<PathBuf>,
 
-    /// Expose stats endpoint at /<ROOM>/stats
+    /// Expose room metadata API under /api/
     ///
-    /// Exposed statistics can be queried individually at  /<ROOM>/stats/<STATISTIC>
-    ///
-    #[clap(long, action)]
-    pub stats: bool,
+    /// The exposed endpoints are:
+    /// * /api/rooms/          - list rooms
+    /// * /api/<ROOM>/         - get room metadata
+    /// * /api/<ROOM>/<METRIC> - get room individual metric
+    #[clap(long, action, alias = "stats", verbatim_doc_comment)]
+    pub api: bool,
 
     /// Port range for TCP
     #[clap(long, value_parser = parse_ports, value_name = "START:END", default_value = "9001:9999")]

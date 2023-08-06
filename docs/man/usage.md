@@ -29,8 +29,11 @@ See the [CLI Reference](/man/cli.md) and the `--tcp`, `--tcpports` and `--cmd-at
 
 ## Rooms
 
-Clients connecting to the server specify a room in the connection URL path.
-The room ID is the first path component of the URL. For example `wss://example.com/exampleroom`.
+Clients connecting to the server specify a room in the connection URL.
+
+The room name can be specified in two ways:
+* Query parameter, eg. `wss://example.com/?room=exampleroom`
+* The first segment in the URL path, eg. `wss://example.com/exampleroom`
 
 Connecting to a room spawns a new process of the wrapped binary or script. Subsequent connections to the same room share the same process.
 
@@ -60,6 +63,7 @@ ScaleSocket can optionally send a message to the target when a client joins or l
 
 The messages support the variables:
 * `#ID` eg. `123`
+* `QUERY_XYZ` for each query parameter, `?xyz=`, in the connection URL.
 * The [Environment variables](#environment-variables)
 
 For example, starting scalesocket with:
@@ -81,7 +85,7 @@ ScaleSocket can optionally expose CGI [environment variables](https://www.rfc-ed
 The supported environment variables are:
 * `QUERY_STRING` eg. `foo=bar&baz=qux`
 * `REMOTE_ADDR` eg. `127.0.0.1:1234`
-* `QUERY_PARAM_XYZ` for each query parameter, `?xyz=`, in the connection URL.
+* `ROOM` eg. `exampleroom`
 * `PORT` for binding in TCP mode
 * Any environment variables specified with `--passenv`
 
@@ -95,15 +99,14 @@ ScaleSocket can expose an [OpenMetrics](https://openmetrics.io/) and [Prometheus
 
 The tracked metrics are:
 * `connections` with the label `room`
-* `unique_connections` with the label `room` (TODO)
 
 See the [CLI Reference](/man/cli.md) and the `--metrics` flag for details.
 
-### Stats Endpoint
+### Metadata Endpoint
 
-ScaleSocket can expose a JSON endpoint for retrieving stats for rooms.
+ScaleSocket can expose a JSON endpoint for retrieving rooms and their metadata.
 
-See the [CLI Reference](/man/cli.md) and the `--stats` flag for details.
+See the [CLI Reference](/man/cli.md) and the `--api` flag for details.
 
 ### Health Endpoint
 

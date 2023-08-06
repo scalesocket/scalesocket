@@ -24,6 +24,14 @@ OPTIONS:
             
             [default: 0.0.0.0:9000]
 
+        --api
+            Expose room metadata API under /api/
+            
+            The exposed endpoints are:
+            * /api/rooms/          - list rooms
+            * /api/<ROOM>/         - get room metadata
+            * /api/<ROOM>/<METRIC> - get room individual metric
+
     -b, --binary
             Set scalesocket to experimental binary mode
 
@@ -80,11 +88,6 @@ OPTIONS:
 
         --staticdir <DIR>
             Serve static files from directory over HTTP
-
-        --stats
-            Expose stats endpoint at /<ROOM>/stats
-            
-            Exposed statistics can be queried individually at  /<ROOM>/stats/<STATISTIC>
 
         --tcp
             Connect to child using TCP instead of stdio. Use PORT to bind

@@ -12,14 +12,14 @@ pub type PortID = u16;
 #[derive(Debug)]
 pub enum Event {
     Connect {
+        env: Env,
         room: RoomID,
         ws: Box<WebSocket>,
-        env: Env,
     },
     Disconnect {
+        env: Env,
         room: RoomID,
         conn: ConnID,
-        env: Env,
     },
     ProcessExit {
         room: RoomID,

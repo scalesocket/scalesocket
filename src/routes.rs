@@ -30,7 +30,8 @@ pub fn handle(
         socket(tx)
             .or(health())
             .or(openmetrics(registry, config.metrics))
-            .or(stats(metrics, config.stats))
+            .or(rooms_api(metrics.clone(), config.api))
+            .or(metadata_api(metrics, config.api))
             .or(files(config.staticdir.clone())),
     )
     .bind_with_graceful_shutdown(config.addr, shutdown_rx)
@@ -38,20 +39,18 @@ pub fn handle(
 }
 
 pub fn socket(tx: EventTx) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
-    warp::path!(String)
+    warp::any()
+        .and(warpext::path_or_query::param("room"))
         .and(warp::path::end())
         .and(warp::ws())
         .and(warpext::env())
         .map(move |room: RoomID, websocket: Ws, env: Env| {
             let tx = tx.clone();
             websocket.on_upgrade(move |ws| {
-                let event = Event::Connect {
-                    ws: Box::new(ws),
-                    room,
-                    env,
-                };
+                let ws = Box::new(ws);
+                let event = Event::Connect { env, room, ws };
                 tx.send(event).expect("Failed to send Connect event");
-                async {}
+                futures::future::ready(())
             })
         })
 }
@@ -97,7 +96,18 @@ pub fn openmetrics(
         })
 }
 
-pub fn stats(
+pub fn rooms_api(
+    metrics: Metrics,
+    enabled: bool,
+) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
+    warpext::enable_if(enabled)
+        .and(warp::path!("api" / "rooms"))
+        .and(warp::path::end())
+        .and(warp::get())
+        .map(move || warp::reply::json(&metrics.get_rooms()))
+}
+
+pub fn metadata_api(
     metrics: Metrics,
     enabled: bool,
 ) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
@@ -105,18 +115,21 @@ pub fn stats(
         .map(Some)
         .or_else(|_| async { Ok::<(Option<String>,), std::convert::Infallible>((None,)) });
 
-    warpext::enable_if(enabled).and(
-        warp::path!(String / "stats" / ..)
-            .and(metric)
-            .and(warp::path::end())
-            .and(warp::get())
-            .map(
-                move |room: RoomID, metric: Option<String>| match metric.as_deref() {
-                    Some("connections") => warp::reply::json(&metrics.get_room_connections(room)),
-                    _ => warp::reply::json(&metrics.get_room(room)),
-                },
-            ),
-    )
+    warpext::enable_if(enabled)
+        .and(
+            warp::path!("api" / RoomID / ..)
+                .or(warp::path!(RoomID / "stats" / ..))
+                .unify(),
+        )
+        .and(metric)
+        .and(warp::path::end())
+        .and(warp::get())
+        .map(
+            move |room: RoomID, metric: Option<String>| match metric.as_deref() {
+                Some("connections") => warp::reply::json(&metrics.get_room_connections(room)),
+                _ => warp::reply::json(&metrics.get_room(room)),
+            },
+        )
 }
 
 pub fn files(
@@ -133,6 +146,7 @@ mod tests {
     use warp::test::request;
 
     use super::*;
+    use serde_json::{self, Value};
 
     #[tokio::test]
     async fn health_returns_ok() {
@@ -164,26 +178,86 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn stats_returns_all_statistics() {
-        let metrics = Metrics::new(&mut None);
+    async fn room_api_returns_all_rooms() {
+        let metrics = Metrics::new(&mut None, true);
         metrics.inc_ws_connections("foo");
         metrics.inc_ws_connections("bar");
 
-        let api = stats(metrics, true);
+        let api = rooms_api(metrics, true);
 
-        let resp = request().method("GET").path("/foo/stats").reply(&api).await;
+        let resp = request()
+            .method("GET")
+            .path("/api/rooms/")
+            .reply(&api)
+            .await;
 
-        assert_eq!(resp.status(), StatusCode::OK);
-        assert_eq!(resp.body(), "{\"connections\":1}");
+        assert!(resp.status().is_success());
+        let body: Vec<Value> = serde_json::from_slice(resp.body()).unwrap();
+        assert!(body.contains(&json!({"name": "foo", "connections": 1})));
+        assert!(body.contains(&json!({"name": "bar", "connections": 1})));
     }
 
     #[tokio::test]
-    async fn stats_metric_returns_single_statistic() {
-        let metrics = Metrics::new(&mut None);
+    async fn metadata_api_returns_room_metadata() {
+        let metrics = Metrics::new(&mut None, true);
         metrics.inc_ws_connections("foo");
         metrics.inc_ws_connections("bar");
 
-        let api = stats(metrics, true);
+        let api = metadata_api(metrics, true);
+
+        let resp = request().method("GET").path("/api/foo/").reply(&api).await;
+
+        assert!(resp.status().is_success());
+        let body: Value = serde_json::from_slice(resp.body()).unwrap();
+        assert_eq!(body, json!({"name": "foo", "connections": 1}));
+    }
+
+    #[tokio::test]
+    async fn metadata_api_returns_room_metric() {
+        let metrics = Metrics::new(&mut None, true);
+        metrics.inc_ws_connections("foo");
+        metrics.inc_ws_connections("bar");
+
+        let api = metadata_api(metrics, true);
+
+        let resp = request()
+            .method("GET")
+            .path("/api/foo/connections")
+            .reply(&api)
+            .await;
+
+        assert!(resp.status().is_success());
+        assert_eq!(resp.body(), "1");
+    }
+
+    #[tokio::test]
+    async fn stats_api_returns_all_statistics() {
+        // NOTE: deprecated
+        let metrics = Metrics::new(&mut None, true);
+        metrics.inc_ws_connections("foo");
+        metrics.inc_ws_connections("bar");
+
+        let api = metadata_api(metrics, true);
+
+        let resp = request()
+            .method("GET")
+            .path("/foo/stats/")
+            .reply(&api)
+            .await;
+
+        assert!(resp.status().is_success());
+        let body: Value = serde_json::from_slice(resp.body()).unwrap();
+        assert_eq!(body, json!({"name": "foo", "connections": 1}));
+    }
+
+    #[tokio::test]
+    async fn stats_api_returns_single_statistic() {
+        // NOTE: deprecated
+        let metrics = Metrics::new(&mut None, true);
+        metrics.inc_ws_connections("foo");
+        metrics.inc_ws_connections("bar");
+
+        let api = metadata_api(metrics, true);
 
         let resp = request()
             .method("GET")
@@ -191,7 +265,7 @@ mod tests {
             .reply(&api)
             .await;
 
-        assert_eq!(resp.status(), StatusCode::OK);
+        assert!(resp.status().is_success());
         assert_eq!(resp.body(), "1");
     }
 }
