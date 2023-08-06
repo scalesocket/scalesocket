@@ -31,7 +31,7 @@ pub fn handle(
             .or(health())
             .or(openmetrics(registry, config.metrics))
             .or(rooms_api(metrics.clone(), config.stats))
-            .or(stats_api(metrics, config.stats))
+            .or(metadata_api(metrics, config.stats))
             .or(files(config.staticdir.clone())),
     )
     .bind_with_graceful_shutdown(config.addr, shutdown_rx)
@@ -107,7 +107,7 @@ pub fn rooms_api(
         .map(move || warp::reply::json(&metrics.get_rooms()))
 }
 
-pub fn stats_api(
+pub fn metadata_api(
     metrics: Metrics,
     enabled: bool,
 ) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
@@ -116,7 +116,11 @@ pub fn stats_api(
         .or_else(|_| async { Ok::<(Option<String>,), std::convert::Infallible>((None,)) });
 
     warpext::enable_if(enabled)
-        .and(warp::path!("api" / RoomID / ..))
+        .and(
+            warp::path!("api" / RoomID / ..)
+                .or(warp::path!(RoomID / "stats" / ..))
+                .unify(),
+        )
         .and(metric)
         .and(warp::path::end())
         .and(warp::get())
@@ -194,12 +198,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn stats_api_returns_all_statistics() {
+    async fn metadata_api_returns_room_metadata() {
         let metrics = Metrics::new(&mut None, true);
         metrics.inc_ws_connections("foo");
         metrics.inc_ws_connections("bar");
 
-        let api = stats_api(metrics, true);
+        let api = metadata_api(metrics, true);
 
         let resp = request().method("GET").path("/api/foo/").reply(&api).await;
 
@@ -209,16 +213,51 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn stats_api_returns_single_statistic() {
+    async fn metadata_api_returns_room_metric() {
         let metrics = Metrics::new(&mut None, true);
         metrics.inc_ws_connections("foo");
         metrics.inc_ws_connections("bar");
 
-        let api = stats_api(metrics, true);
+        let api = metadata_api(metrics, true);
 
         let resp = request()
             .method("GET")
             .path("/api/foo/connections")
+            .reply(&api)
+            .await;
+
+        assert!(resp.status().is_success());
+        assert_eq!(resp.body(), "1");
+    }
+
+    #[tokio::test]
+    async fn stats_api_returns_all_statistics() {
+        // NOTE: deprecated
+        let metrics = Metrics::new(&mut None, true);
+        metrics.inc_ws_connections("foo");
+        metrics.inc_ws_connections("bar");
+
+        let api = metadata_api(metrics, true);
+
+        let resp = request().method("GET").path("/foo/stats/").reply(&api).await;
+
+        assert!(resp.status().is_success());
+        let body: Value = serde_json::from_slice(resp.body()).unwrap();
+        assert_eq!(body, json!({"name": "foo", "connections": 1}));
+    }
+
+    #[tokio::test]
+    async fn stats_api_returns_single_statistic() {
+        // NOTE: deprecated
+        let metrics = Metrics::new(&mut None, true);
+        metrics.inc_ws_connections("foo");
+        metrics.inc_ws_connections("bar");
+
+        let api = metadata_api(metrics, true);
+
+        let resp = request()
+            .method("GET")
+            .path("/foo/stats/connections")
             .reply(&api)
             .await;
 
