@@ -30,8 +30,8 @@ pub fn handle(
         socket(tx)
             .or(health())
             .or(openmetrics(registry, config.metrics))
-            .or(rooms_api(metrics.clone(), config.stats))
-            .or(metadata_api(metrics, config.stats))
+            .or(rooms_api(metrics.clone(), config.api))
+            .or(metadata_api(metrics, config.api))
             .or(files(config.staticdir.clone())),
     )
     .bind_with_graceful_shutdown(config.addr, shutdown_rx)
@@ -239,7 +239,11 @@ mod tests {
 
         let api = metadata_api(metrics, true);
 
-        let resp = request().method("GET").path("/foo/stats/").reply(&api).await;
+        let resp = request()
+            .method("GET")
+            .path("/foo/stats/")
+            .reply(&api)
+            .await;
 
         assert!(resp.status().is_success());
         let body: Value = serde_json::from_slice(resp.body()).unwrap();

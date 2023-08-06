@@ -99,15 +99,14 @@ ScaleSocket can expose an [OpenMetrics](https://openmetrics.io/) and [Prometheus
 
 The tracked metrics are:
 * `connections` with the label `room`
-* `unique_connections` with the label `room` (TODO)
 
 See the [CLI Reference](/man/cli.md) and the `--metrics` flag for details.
 
-### Stats Endpoint
+### Metadata Endpoint
 
-ScaleSocket can expose a JSON endpoint for retrieving stats for rooms.
+ScaleSocket can expose a JSON endpoint for retrieving rooms and their metadata.
 
-See the [CLI Reference](/man/cli.md) and the `--stats` flag for details.
+See the [CLI Reference](/man/cli.md) and the `--api` flag for details.
 
 ### Health Endpoint
 

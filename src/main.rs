@@ -35,7 +35,7 @@ async fn main() {
     let events_shutdown_tx = tx.clone();
 
     let mut registry = config.metrics.then_some(<Registry>::default());
-    let mtr = Metrics::new(&mut registry, config.stats);
+    let mtr = Metrics::new(&mut registry, config.api);
 
     tracing::info! { "listening at {}", config.addr };
 
