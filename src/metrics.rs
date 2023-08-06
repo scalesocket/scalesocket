@@ -30,13 +30,13 @@ impl Metrics {
 
         if let Some(registry) = registry {
             registry.register(
-                "scalesocket_websocket_connections_total",
+                "scalesocket_websocket_connections",
                 "Number of total websocket connections",
                 ws_connections_counter.clone(),
             );
             registry.register(
                 "scalesocket_websocket_connections_open",
-                "number of open websocket connections",
+                "Number of open websocket connections",
                 ws_connections_open_gauge.clone(),
             );
         }
