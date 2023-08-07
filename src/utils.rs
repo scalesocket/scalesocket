@@ -10,7 +10,11 @@ use {
 /// Our global unique connection id counter.
 static NEXT_CONNECTION_ID: AtomicU32 = AtomicU32::new(1);
 
+#[allow(unreachable_code)]
 pub fn new_conn_id() -> ConnID {
+    #[cfg(test)]
+    return 1;
+
     NEXT_CONNECTION_ID.fetch_add(1, Ordering::Relaxed)
 }
 

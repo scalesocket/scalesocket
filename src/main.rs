@@ -51,6 +51,7 @@ mod tests {
     use clap::Parser;
     use futures::{FutureExt, StreamExt};
     use prometheus_client::registry::Registry;
+    use tokio::task::yield_now;
     use warp::test::WsClient;
 
     use super::routes;
@@ -77,6 +78,7 @@ mod tests {
 
         pub async fn send(&mut self, text: &'static str) -> &Self {
             self.inner.send_text(text).await;
+            yield_now().await;
             self
         }
 
@@ -86,6 +88,11 @@ mod tests {
                 Ok(msg) => Ok(msg.to_str().unwrap_or_default().to_owned()),
                 Err(_) => Err(()),
             }
+        }
+
+        pub async fn inspect_flaky(&mut self) -> Vec<String> {
+            let stream = Box::pin(self.recv().into_stream());
+            stream.map(|line| line.unwrap_or_default()).collect().await
         }
     }
 
@@ -130,19 +137,44 @@ mod tests {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
         let config = create_config("scalesocket --oneshot echo -- hello");
         let metrics = create_metrics();
-        let mut received_messages: Vec<String> = Vec::new();
         let mut client = Client::connect("/example", tx.clone()).await;
 
-        let inspect = async {
-            // TODO figure out easier way to inspect stream
-            let mut stream = Box::pin(client.recv().into_stream());
-            while let Some(msg) = stream.next().await {
-                received_messages.push(msg.unwrap_or_default());
-            }
-        };
+        let handle = events::handle(tx.clone(), rx, config, metrics);
+        let inspect = client.inspect_flaky();
+
+        let (_, received_messages) = tokio::join!(handle, inspect);
+        assert_eq!(received_messages, vec!["hello"]);
+    }
+
+    #[tokio::test]
+    async fn stdio_e2e_framed_from() {
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
+        let config = create_config("scalesocket --oneshot --frame=json head -- -n 1");
+        let metrics = create_metrics();
+        let mut client = Client::connect("/example", tx.clone()).await;
+
+        client.send("{}").await;
+
+        let inspect = client.inspect_flaky();
         let handle = events::handle(tx.clone(), rx, config, metrics);
 
-        let _ = tokio::join!(handle, inspect);
-        assert_eq!(received_messages, vec!["hello"]);
+        let (_, received_messages) = tokio::join!(handle, inspect);
+        assert_eq!(received_messages, vec![r#"{"_from":1}"#]);
+    }
+
+    #[tokio::test]
+    async fn stdio_e2e_framed_to() {
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
+        let config = create_config("scalesocket --oneshot --frame=json head -- -n 1");
+        let metrics = create_metrics();
+        let mut client = Client::connect("/example", tx.clone()).await;
+
+        client.send(r#"{"_to":1}"#).await;
+
+        let handle = events::handle(tx, rx, config, metrics);
+        let inspect = client.inspect_flaky();
+
+        let (_, received_messages) = tokio::join!(handle, inspect);
+        assert_eq!(received_messages, vec![r#"{"_from":1,"_to":1}"#]);
     }
 }

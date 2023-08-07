@@ -252,24 +252,24 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_process_output_framed_json() {
-        let channel = create_channel(r#"scalesocket --frame=json echo -- {"id": 0}"#);
+        let channel = create_channel(r#"scalesocket --frame=json echo -- {"_to": 0}"#);
         let mut proc_rx = channel.cast_tx.subscribe();
 
         handle(channel, None).await.ok();
         let output = proc_rx.recv().await.ok();
 
-        assert_eq!(output, Some(Message::text("{\"id\": 0}").to(0)));
+        assert_eq!(output, Some(Message::text(r#"{"_to": 0}"#).to(0)));
     }
 
     #[tokio::test]
     async fn test_handle_process_output_server_framed_json() {
-        let channel = create_channel(r#"scalesocket --server-frame=json echo -- {"id": 0}"#);
+        let channel = create_channel(r#"scalesocket --server-frame=json echo -- {"_to": 0}"#);
         let mut proc_rx = channel.cast_tx.subscribe();
 
         handle(channel, None).await.ok();
         let output = proc_rx.recv().await.ok();
 
-        assert_eq!(output, Some(Message::text("{\"id\": 0}").to(0)));
+        assert_eq!(output, Some(Message::text(r#"{"_to": 0}"#).to(0)));
     }
 
     #[tokio::test]
@@ -338,9 +338,7 @@ mod tests {
         let sock_tx = channel.tx.clone();
 
         let send = async {
-            sock_tx
-                .send(Message::text("{'id': 1, 'msg': 'foo'}\n"))
-                .ok();
+            sock_tx.send(Message::text("{'msg': 'foo'}\n")).ok();
             Ok(())
         };
         let handle = handle(channel, None);
@@ -348,9 +346,6 @@ mod tests {
         tokio::try_join!(handle, send).ok();
         let output = proc_rx.recv().await.ok();
 
-        assert_eq!(
-            output,
-            Some(Message::text("{'id': 1, 'msg': 'foo'}").broadcast())
-        );
+        assert_eq!(output, Some(Message::text("{'msg': 'foo'}").broadcast()));
     }
 }
