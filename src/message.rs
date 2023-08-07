@@ -1,9 +1,9 @@
-use serde_json::Value;
-
 use crate::types::{ConnID, Frame};
-use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
-use {bytes::Bytes, sender_sink::wrappers::SinkError, warp::ws::Message};
+
+use {
+    bytes::Bytes, num_derive::FromPrimitive, num_traits::FromPrimitive,
+    sender_sink::wrappers::SinkError, serde_json::Value, warp::ws::Message,
+};
 
 /// An extension trait for `Message`s that provides routing helpers
 pub trait Address<T> {
@@ -26,6 +26,7 @@ impl Address<Message> for Message {
     }
 }
 
+/// Deserialize message going to client
 pub fn deserialize(
     msg: &Bytes,
     frame: Option<Frame>,
@@ -58,13 +59,14 @@ pub fn deserialize(
     }
 }
 
+/// Serialize message going to process
 pub fn serialize(msg: Message, conn: ConnID, frame: Option<Frame>) -> Result<Message, SinkError> {
     match frame {
         Some(f) => match f {
             Frame::Binary => unimplemented!("Client side binary framing has not been implemented"),
             Frame::JSON => match serde_json::from_slice::<Value>(msg.as_bytes()) {
                 Ok(mut v) if v.is_object() => {
-                    v["id"] = Value::from(conn);
+                    v["_from"] = Value::from(conn);
                     Ok(Message::text(v.to_string()))
                 }
                 Ok(_) => {
@@ -90,7 +92,7 @@ pub enum Type {
 pub fn parse_json_header(msg: &Bytes) -> (Option<ConnID>, &[u8]) {
     let id = match serde_json::from_slice::<Value>(msg) {
         Ok(ref payload) => payload
-            .get("id")
+            .get("_to")
             .and_then(|v: &Value| v.as_u64())
             .and_then(|v: u64| u32::try_from(v).ok()),
         _ => None,
