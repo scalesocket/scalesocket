@@ -52,10 +52,14 @@ pub fn exit_code<T>(status: Result<ExitStatus, T>) -> Option<i32> {
 /// Utility filters for Warp
 pub mod warpext {
     use crate::envvars::{CGIEnv, Env};
-    use std::collections::HashMap;
-    use warp::{self, Filter, Rejection};
+    use std::{collections::HashMap, convert::Infallible};
+    use warp::{self, http::StatusCode, reject::Reject, Filter, Rejection, Reply};
 
     pub type One<T> = (T,);
+
+    #[derive(Debug)]
+    pub struct InvalidRoom;
+    impl Reject for InvalidRoom {}
 
     pub fn enable_if(condition: bool) -> impl Filter<Extract = (), Error = Rejection> + Copy {
         warp::any()
@@ -82,7 +86,7 @@ pub mod warpext {
     pub fn cgi_env() -> impl Filter<Extract = One<CGIEnv>, Error = Rejection> + Copy {
         let optional_query = warp::query::raw()
             .map(Some)
-            .or_else(|_| async { Ok::<One<Option<String>>, std::convert::Infallible>((None,)) });
+            .or_else(|_| async { Ok::<One<Option<String>>, Infallible>((None,)) });
 
         warp::any()
             .and(optional_query)
@@ -94,16 +98,32 @@ pub mod warpext {
             .untuple_one()
     }
 
-    pub mod path_or_query {
-        use super::*;
+    pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
+        use warp::reply::with_status as status;
+        if err.is_not_found() {
+            Ok(status("Not found", StatusCode::NOT_FOUND))
+        } else if err.find::<InvalidRoom>().is_some() {
+            Ok(status("Invalid room", StatusCode::BAD_REQUEST))
+        } else {
+            Ok(status("Internal error", StatusCode::INTERNAL_SERVER_ERROR))
+        }
+    }
 
-        pub fn param(
-            name: &'static str,
-        ) -> impl Filter<Extract = One<String>, Error = Rejection> + Copy {
-            warp::path::param::<String>()
-                .and(warp::query::query())
-                .and_then(async move |path, query: HashMap<String, String>| {
-                    Ok::<_, Rejection>((query.get(name).unwrap_or(&path).to_owned(),))
+    pub mod path {
+
+        use std::{ops::Deref, str::FromStr};
+
+        use super::*;
+        pub fn param_not<T: FromStr + Send + Deref<Target = str> + 'static>(
+            denylist: &'static [&'static str],
+        ) -> impl Filter<Extract = One<T>, Error = Rejection> + Clone {
+            warp::path::param::<T>()
+                .and_then(async move |param: T| {
+                    if denylist.contains(&param.deref()) {
+                        Err(warp::reject::custom(InvalidRoom))
+                    } else {
+                        Ok::<_, Rejection>((param,))
+                    }
                 })
                 // deal with Ok(())
                 .untuple_one()

@@ -169,7 +169,7 @@ fn spawn(
         tracing::debug!("reserved port {}", port);
     }
 
-    let mut proc = Channel::new(&state.cfg, port, env.cgi_env_with(room));
+    let mut proc = Channel::new(&state.cfg, port, env.cgi.clone());
     let senders = proc.take_senders();
 
     let on_init = || {

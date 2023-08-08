@@ -3,7 +3,7 @@ use crate::{
     envvars::Env,
     metrics::Metrics,
     types::{Event, EventTx, RoomID, ShutdownRx},
-    utils::warpext,
+    utils::warpext::{self, handle_rejection},
 };
 
 use {
@@ -14,6 +14,8 @@ use {
     warp::ws::Ws,
     warp::{self, http::Response, Filter, Rejection, Reply},
 };
+
+const RESERVED_ROOMS: &[&str] = &["api", "metrics", "health", "static"];
 
 pub fn handle(
     tx: EventTx,
@@ -32,20 +34,21 @@ pub fn handle(
             .or(openmetrics(registry, config.metrics))
             .or(rooms_api(metrics.clone(), config.api))
             .or(metadata_api(metrics, config.api))
-            .or(files(config.staticdir.clone())),
+            .or(files(config.staticdir.clone()))
+            .recover(handle_rejection),
     )
     .bind_with_graceful_shutdown(config.addr, shutdown_rx)
     .1
 }
 
 pub fn socket(tx: EventTx) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
-    warp::any()
-        .and(warpext::path_or_query::param("room"))
+    warpext::path::param_not::<RoomID>(RESERVED_ROOMS)
         .and(warp::path::end())
         .and(warp::ws())
         .and(warpext::env())
-        .map(move |room: RoomID, websocket: Ws, env: Env| {
+        .map(move |room: RoomID, websocket: Ws, mut env: Env| {
             let tx = tx.clone();
+            env.set_room(&room);
             websocket.on_upgrade(move |ws| {
                 let ws = Box::new(ws);
                 let event = Event::Connect { env, room, ws };
@@ -159,6 +162,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn socket_rejects_invalid_room() {
+        let (tx, _) = tokio::sync::mpsc::unbounded_channel::<Event>();
+        let api = socket(tx).recover(handle_rejection);
+
+        let ws = |path: &'static str| {
+            request()
+                .method("GET")
+                .header("Connection", "Upgrade")
+                .header("Upgrade", "websocket")
+                .header("Sec-WebSocket-Key", "SGVsbG8sIHdvcmxkIQ==")
+                .header("Sec-WebSocket-Version", 13)
+                .path(path)
+                .reply(&api)
+        };
+
+        assert_eq!(ws("/ok").await.status(), StatusCode::SWITCHING_PROTOCOLS);
+        assert_eq!(ws("/api").await.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(ws("/api/rooms").await.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(ws("/metrics").await.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(ws("/health").await.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
     async fn metrics_returns_metrics() {
         let mut registry = <Registry>::default();
         registry.register(
@@ -170,7 +196,7 @@ mod tests {
 
         let resp = request().method("GET").path("/metrics").reply(&api).await;
 
-        assert_eq!(resp.status(), StatusCode::OK);
+        assert!(resp.status().is_success());
         assert_eq!(
             resp.body(),
             "# HELP example_metric Example description.\n# TYPE example_metric counter\n# EOF\n"
