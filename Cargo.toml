@@ -8,7 +8,7 @@ description = "A websocket server and autoscaler"
 homepage = "https://scalesocket.org/"
 repository = "https://github.com/scalesocket/scalesocket/"
 keywords = ["websockets", "gamedev", "server"]
-exclude = [".github/", "Dockerfile"]
+exclude = [".github/", "Dockerfile", "examples/", "docs/"]
 
 [dependencies]
 bytes = "1.4.0"
