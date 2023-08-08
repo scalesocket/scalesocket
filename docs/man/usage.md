@@ -29,11 +29,8 @@ See the [CLI Reference](/man/cli.md) and the `--tcp`, `--tcpports` and `--cmd-at
 
 ## Rooms
 
-Clients connecting to the server specify a room in the connection URL.
-
-The room name can be specified in two ways:
-* Query parameter, eg. `wss://example.com/?room=exampleroom`
-* The first segment in the URL path, eg. `wss://example.com/exampleroom`
+Clients connecting to the server specify a room in the connection URL path.
+The room ID is the first path component of the URL. For example `wss://example.com/exampleroom`.
 
 Connecting to a room spawns a new process of the wrapped binary or script. Subsequent connections to the same room share the same process.
 

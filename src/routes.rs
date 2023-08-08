@@ -39,8 +39,7 @@ pub fn handle(
 }
 
 pub fn socket(tx: EventTx) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
-    warp::any()
-        .and(warpext::path_or_query::param("room"))
+    warp::path!(String)
         .and(warp::path::end())
         .and(warp::ws())
         .and(warpext::env())
