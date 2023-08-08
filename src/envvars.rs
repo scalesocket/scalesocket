@@ -8,11 +8,8 @@ pub struct Env {
 }
 
 impl Env {
-    pub fn cgi_env_with(&self, room: &str) -> CGIEnv {
-        CGIEnv {
-            room: Some(room.to_string()),
-            ..self.cgi.clone()
-        }
+    pub fn set_room(&mut self, room: &str) {
+        self.cgi.room = Some(room.to_string());
     }
 }
 
