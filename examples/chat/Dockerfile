@@ -3,6 +3,6 @@ FROM scalesocket/scalesocket:latest
 COPY index.html /var/www/public/index.html
 CMD scalesocket --addr 0.0.0.0:5000\
     --staticdir /var/www/public/\
-    --stats\
+    --api\
     --metrics\
     cat

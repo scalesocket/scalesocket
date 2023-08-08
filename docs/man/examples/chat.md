@@ -59,3 +59,5 @@ The frontend connects to the backend using websockets. The backend spins up a ne
 When the frontend sends a chat message, ScaleSocket passes it directly to the *stdin* of `cat`.
 
 Since `cat` echoes all input it receives, the reply to *stdout* is the message itself, which ScaleSocket sends back to all connected clients.
+
+This is obviously not a tamper-proof setup. A more complete example would utilize the `_from` field, which is added by the scalesocket server when `--frame=json` is specified.

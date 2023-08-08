@@ -16,7 +16,7 @@ export class Game {
         if (t == "State") {
             this.state.updatePlayers(data.players);
         } else if (t == "Leave") {
-            this.state.removePlayer(data.leaver);
+            this.state.removePlayer(data.id);
         }
     }
 
@@ -72,9 +72,7 @@ class GameState {
         this.stage.addChild(sprite);
     }
 
-
     removePlayer(id) {
-        console.log(id)
         if (id in this.players) {
             console.log('removing player');
             const sprite = this.players[id].sprite;
@@ -84,7 +82,7 @@ class GameState {
         }
     }
 
-    interpolate(dt) {
+    interpolate(_dt) {
         for (const { pos, sprite } of Object.values(this.players)) {
             const [x, y] = pos;
             const dx = (x - sprite.x) / 3;
