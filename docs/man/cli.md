@@ -5,7 +5,7 @@ hide_side_table_of_contents: true
 
 ```console
 $ scalesocket --help
-scalesocket 0.1.4
+scalesocket 0.1.5
 A websocket server and autoscaler
 
 USAGE:
