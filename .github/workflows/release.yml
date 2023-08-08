@@ -44,7 +44,10 @@ jobs:
 
       - name: Extract tag
         id: meta
-        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+
+      - name: Check tag
+        run: echo ${{ steps.meta.outputs.tag }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825
