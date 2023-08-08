@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - "**"
+      - "!README.md"
       - "!/docs/**"
       - "!/examples/**"
       - "!/LICENSE"
@@ -11,6 +12,7 @@ on:
       - main
     paths:
       - "**"
+      - "!README.md"
       - "!/docs/**"
       - "!/examples/**"
       - "!/LICENSE"

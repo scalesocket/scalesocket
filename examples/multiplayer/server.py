@@ -19,7 +19,7 @@ def main():
             send_event("State", {"players": players}, to_id=id)
         elif t == "Leave":
             del players[id]
-            send_event("Leave", {"leaver": id})
+            send_event("Leave", {"id": id})
         elif t == "Input":
             players[id] = (data.get("x", 0), data.get("y", 0))
             send_event("State", {"players": players})
@@ -27,7 +27,7 @@ def main():
 
 def send_event(t: str, data: dict, to_id: int = None):
     # sending data is as easy as printing
-    print(dumps({"t": t, "data": data, "id": to_id}))
+    print(dumps({"t": t, "data": data, "_to": to_id}))
 
 
 def parse_json(data: str):
@@ -38,7 +38,7 @@ def parse_json(data: str):
 
 def parse_event(event: dict):
     with suppress(KeyError):
-        return event["t"], int(event["id"]), event.get("data")
+        return event["t"], int(event["_from"]), event.get("data")
     return None, None, None
 
 

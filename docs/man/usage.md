@@ -42,15 +42,15 @@ ScaleSocket can optionally parse, tag and route messages.
 
 When `--frame=json` is enabled, messages will be parsed and routed, with the following rules:
 * Messages from the client, that are not valid JSON are dropped
-* Messages from the client are tagged with an `id` field
-* Messages from the server, that contain an `id` field will be routed to the specific client
+* Messages from the client are tagged with an `_from` field
+* Messages from the server, that contain an `_to` field will be routed to the specific client
 
 ### Binary Framing
 
 When `--frame=binary` is enabled, ScaleSocket is compatible with [gwsocket](https://gwsocket.io/). Messages will be parsed according to the [gwsocket strict mode](https://gwsocket.io/man#man-strict-mode), with the following rules:
 * Messages from the client, with an invalid header are dropped
 * Messages from the client must set the header type to `0x01` (text)
-* Messages from the server, that contain an `id` field will be routed to the specific client
+* Messages from the server, that contain a nonzero client `id` field will be routed to the specific client
 
 See the [CLI Reference](/man/cli.md) and the `--frame`, `--server-frame` and `--client-frame` arguments for details.
 
@@ -66,10 +66,10 @@ The messages support the variables:
 For example, starting scalesocket with:
 
 ```console
-$ scalesocket --joinmsg '{"type":"Join","id":#ID}' --leavemsg '{"type":"Leave"}' ./example.sh
+$ scalesocket --joinmsg '{"type":"Join","_from":#ID}' ./example.sh
 ```
 
-Sends the message `{"type":"Join","id":123}` to the server when a new client joins. This is useful for keeping track of connected clients.
+Sends the message `{"type":"Join","_from":123}` to the server when a new client joins. This is useful for keeping track of connected clients.
 
 
 See the [CLI Reference](/man/cli.md) and the `--joinmsg` and `--leavemsg` arguments for details.
@@ -95,13 +95,16 @@ See the [CLI Reference](/man/cli.md) and the `--passenv` argument for details.
 ScaleSocket can expose an [OpenMetrics](https://openmetrics.io/) and [Prometheus](https://prometheus.io/) compatible endpoint for scraping metrics.
 
 The tracked metrics are:
-* `connections` with the label `room`
+* `scalesocket_websocket_connections` with the label `room`
+* `scalesocket_websocket_connections_total` with the label `room`
 
 See the [CLI Reference](/man/cli.md) and the `--metrics` flag for details.
 
 ### Metadata Endpoint
 
 ScaleSocket can expose a JSON endpoint for retrieving rooms and their metadata.
+
+This is useful for building a lobby or room list.
 
 See the [CLI Reference](/man/cli.md) and the `--api` flag for details.
 

@@ -1,9 +1,9 @@
-# Scalesocket
+# ScaleSocket
 
 [![Build status](https://github.com/scalesocket/scalesocket/actions/workflows/ci.yml/badge.svg)](https://github.com/scalesocket/scalesocket/actions)
 [![Crates.io](https://img.shields.io/crates/v/scalesocket.svg)](https://crates.io/crates/scalesocket)
 
-*Scalesocket* is a websocket server and autoscaler. It's a simple way to build multiplayer backends.
+*ScaleSocket* is a websocket server and autoscaler. It's a simple way to build multiplayer backends.
 
 ![High level architecture diagram on ScaleSocket usage](https://github.com/scalesocket/scalesocket/blob/main/docs/_assets/diagram.svg?raw=true)
 
@@ -64,4 +64,4 @@ $ curl --include \
 �{"message": "hello world"}�{"message": "goodbye"}%
 ```
 
-For more advanced usage and features, see [usage](/man/usage.md).
+For more advanced usage and features, see [usage](https://www.scalesocket.org/man/usage.md).

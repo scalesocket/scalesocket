@@ -24,6 +24,12 @@ ScaleSocket lets you to wrap a script or binary, and serve it over websockets. C
 
 </div>
 
+## ScaleSocket vs. Websocketd
+
+ScaleSocket is inteded to be a drop-in replacement for [websocketd](http://websocketd.com/). It supports many of the same features, but allows websocket connections to share a single backend process.
+
+For a full comparison of alternatives, see [comparison](/man/comparison.md).
+
 ## What can it be used for?
 
 ScaleSocket is useful for building and prototyping multiplayer backends. It can be used for chat rooms, multiplayer games and real-time collaboration applications.
