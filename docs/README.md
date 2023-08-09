@@ -21,6 +21,7 @@ ScaleSocket lets you to wrap a script or binary, and serve it over websockets. C
 
 [Quick Start](/man/README.md#quick-start)
 [Installation](/man/installation.md)
+[Online Demo](https://demo-multiplayer.scalesocket.org/)
 
 </div>
 
