@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>Terminal Streaming Example using ScaleSocket</title>
+    <meta charset="utf-8" />
+    <script src=" https://cdn.jsdelivr.net/npm/xterm@5.2.1/lib/xterm.min.js "></script>
+    <script src=" https://cdn.jsdelivr.net/npm/xterm-addon-attach@0.8.0/lib/xterm-addon-attach.min.js "></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-attach@0.8.0/lib/xterm-addon-attach.min.js"></script>
+    <link href=" https://cdn.jsdelivr.net/npm/xterm@5.2.1/css/xterm.min.css " rel="stylesheet">
+    <style>
+        body { background-color: #e2e8f0; font-family: Arial, Helvetica, sans-serif; text-align: center; }
+        #terminal { margin: 0 auto; max-width: 48rem; }
+    </style>
+</head>
+
+<body>
+    <div>
+        <h1>Terminal Streaming Example</h1>
+        <p><select
+                onchange="let value = this.options[this.selectedIndex].value || (Math.random() + 1).toString(36).substring(7); window.location.search = `?room=${value}`;">
+                <option disabled selected>Change Room</option>
+                <option value="default">Room 0 (default)</option>
+                <option value="room1">Room 1</option>
+                <option value="room2">Room 2</option>
+                <option value="room3">Room 3</option>
+                <option value="">Create new room</option>
+            </select></p>
+    </div>
+    <div id="terminal"></div>
+    <p>Multiplayer terminal <a href="https://github.com/alexdantas/nsnake/" target="_blank">snake</a>. Try opening
+        multiple instances. Built with <a href="https://www.scalesocket.org" target="_blank">ScaleSocket</a>.</p>
+    <script>
+        const $ = document.querySelector.bind(document);
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const params = new URLSearchParams(document.location.search);
+        const room = params.get("room") ?? 'default';
+
+        // create a terminal
+        const term = new Terminal({ disableStdin: false });
+        const element = $('#terminal');
+
+        // connect to websocket server and room based on URL
+        const ws = new WebSocket(`${protocol}:${window.location.host}/${room}`);
+        const attachAddon = new AttachAddon.AttachAddon(ws);
+
+        // attach the socket to term
+        term.loadAddon(attachAddon);
+        term.open(element);
+
+
+        ws.addEventListener("open", (event) => {
+            $('.xterm-helper-textarea').focus();
+        });
+    </script>
+</body>
+
+</html>

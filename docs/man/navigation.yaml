@@ -17,8 +17,10 @@
     href: examples/chat.md
   - label: Multiplayer Game
     href: examples/multiplayer.md
+  - label: Terminal Streaming
+    href: examples/terminal.md
   - label: More Examples
-    external: https://github.com/scalesocket/website/tree/main/examples
+    external: https://github.com/scalesocket/scalesocket/tree/main/examples
 - heading: Reference
   items:
   - label: Command Line Arguments

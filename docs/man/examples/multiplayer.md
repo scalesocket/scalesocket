@@ -2,9 +2,9 @@
 title: Multipayer game example using ScaleSocket
 ---
 
-# Multiplayer Game Example in Javascript & Python
+# Multiplayer game Example in Javascript & Python
 
-A simple example. An game that has a backend in Python and frontend in Javascript.
+A simple example. An game that has a backend in Python and frontend in Javascript, using [pixi.js](https://pixijs.com/).
 
 ➡ [View demo online](https://demo-multiplayer.scalesocket.org)  
 ➡ [View full source on GitHub](https://github.com/scalesocket/scalesocket/tree/main/examples/multiplayer)  
@@ -27,7 +27,7 @@ Then open `http://localhost:5000/` in your browser.
 
 The frontend consists of three files `index.html`, `client.js` and `bunny.png`. [Pixi.js](https://www.pixijs.com/) is used to simplify drawing and managing sprites.
 
-The `index.html` file loads the game and connects to the backend using websockets.
+The `index.html` file loads the game and connects to the server using websockets.
 
 ```html
 {% include "_partials/examples/multiplayer/index.html" %}
@@ -70,7 +70,7 @@ scalesocket --addr 0.0.0.0:5000\
 
 ## How does it work?
 
-The frontend connects to the backend using websockets. The backend spins up a new `server.py` process.
+The frontend connects to the server using websockets. The server spins up a new `server.py` process.
 
 When the frontend sends a input, ScaleSocket passes it directly to the *stdin* of `server.py`.
 

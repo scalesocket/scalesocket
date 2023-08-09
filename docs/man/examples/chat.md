@@ -2,7 +2,7 @@
 title: Websocket chat example using ScaleSocket
 ---
 
-# Chat Example in Javascript
+# Chat example in Javascript
 
 The most trivial example. A chat based on wrapping [cat(1)](https://linux.die.net/man/1/cat) without any backend code.
 
@@ -24,7 +24,7 @@ Then open `http://localhost:5000/` in your browser.
 
 ## Frontend code
 
-The frontend is a single html file, `index.html`, with some javascript. It connects with websockets to the backend and shows a chat interface.
+The frontend is a single html file, `index.html`, with some javascript. It connects with websockets to the server and shows a chat interface.
 
 ```html
 {% include "_partials/examples/chat/index.html" %}
@@ -54,7 +54,7 @@ scalesocket --addr 0.0.0.0:5000\
 
 ## How does it work?
 
-The frontend connects to the backend using websockets. The backend spins up a new `cat` process.
+The frontend connects to the server using websockets. The backend spins up a new `cat` process.
 
 When the frontend sends a chat message, ScaleSocket passes it directly to the *stdin* of `cat`.
 

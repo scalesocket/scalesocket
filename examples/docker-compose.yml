@@ -18,3 +18,12 @@ services:
       - ./multiplayer/:/app/
     ports:
       - "5000:5000"
+
+  terminal:
+    build:
+      context: terminal/
+    volumes:
+      - ./terminal/:/var/www/public
+      - ./terminal/:/app/
+    ports:
+      - "5000:5000"
