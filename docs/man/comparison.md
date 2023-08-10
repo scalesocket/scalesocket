@@ -20,7 +20,7 @@ The table highlights which tools support bidirectional communication with a shar
 |                                                Application|Language|Spawn Technology|Channels|Bidirectional connection|Shared backend|Use case|
 |:----|:----|:----|:----|:----|:----|:----|
 |[ScaleSocket](https:/scalesocket.org/)|rust|processes|stdio, tcp|✓|✓|bidirectional websocket server|
-|[spawner](https://github.com/drifting-in-space/spawner)|rust|docker, kubernetes|http, ws|✓|✓|bidirectional websocket server|
+|[plane](https://github.com/drifting-in-space/plane)|rust|docker|http, ws|✓|✓|bidirectional websocket server|
 |[websocketd](http://websocketd.com/)|go|processes|stdio|✓| |bidirectional websocket server|
 |[websocat](https://github.com/vi/websocat)|rust|processes|stdio, tcp|✓| |all-round tool|
 |[gwsocket](https://gwsocket.io/)|c| |stdio, pipes|✓|✓|bidirectional websocket stream|
