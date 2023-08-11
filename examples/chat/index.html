@@ -33,7 +33,7 @@
         <div id="messages" class="grow"></div>
         <div id="message">
             <input name="nick" placeholder="nick" class="input-rounded" value="anonymous" />
-            <input name="message" placeholder="message..." class="input-rounded grow" />
+            <input name="message" placeholder="connecting..." class="input-rounded grow" disabled />
         </div>
     </div>
     <script>
@@ -75,10 +75,14 @@
             });
 
             // set input focus
+            $("input[name=message]").placeholder = "message...";
+            $("input[name=message]").disabled = false;
             $("input[name=message]").focus();
         }
 
-        init();
+        ws.addEventListener('open', _ => {
+            init();
+        });
     </script>
 </body>
 

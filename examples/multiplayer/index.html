@@ -34,6 +34,7 @@
         const params = new URLSearchParams(document.location.search);
         const room = params.get("room") ?? 'default';
 
+        // create a new PIXI application with resources
         const app = new PIXI.Application({
             width: 480, height: 480, autoDensity: true,
             view: $('#canvas'),
@@ -42,14 +43,21 @@
 
         PIXI.Assets.addBundle('default', { 'bunny': 'bunny.png' });
 
-        void PIXI.Assets.loadBundle('default').then(async (resources) => {
-            // connect to websocket server and room based on URL
-            const ws = new WebSocket(`${protocol}:${window.location.host}/${room}`);
-            // start the game
+        let load = PIXI.Assets.loadBundle('default');
+
+        // connect to websocket server and room based on URL
+        const ws = new WebSocket(`${protocol}:${window.location.host}/${room}`);
+
+        let connect = new Promise((resolve, reject) => {
+            ws.addEventListener('open', (event) => resolve(), { once: true });
+            ws.addEventListener('error', (event) => reject(), { once: true });
+        });
+
+        // start the game
+        Promise.all([load, connect]).then(async ([resources, _]) => {
             const game = new Game(app, ws, resources);
             await game.init();
         });
-
     </script>
 </body>
 
