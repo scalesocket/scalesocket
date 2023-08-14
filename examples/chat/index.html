@@ -58,30 +58,25 @@
             el.scrollTop = el.scrollHeight;
         }
 
-        const init = () => {
-            // set websocket listener
-            ws.addEventListener('message', e => {
-                const message = JSON.parse(e.data);
-                recvMessage(message);
-            });
+        // set websocket listener
+        ws.addEventListener('message', e => {
+            const message = JSON.parse(e.data);
+            recvMessage(message);
+        });
+        // set input listener
+        $("input[name=message]").addEventListener('keyup', ({ key, target }) => {
+            if (key === 'Enter') {
+                sendMessage(target.value);
+                target.value = "";
+                target.focus();
+            }
+        });
 
-            // set input listener
-            $("input[name=message]").addEventListener('keyup', ({ key, target }) => {
-                if (key === 'Enter') {
-                    sendMessage(target.value);
-                    target.value = "";
-                    target.focus();
-                }
-            });
-
+        ws.addEventListener('open', _ => {
             // set input focus
             $("input[name=message]").placeholder = "message...";
             $("input[name=message]").disabled = false;
             $("input[name=message]").focus();
-        }
-
-        ws.addEventListener('open', _ => {
-            init();
         });
     </script>
 </body>

@@ -54,7 +54,7 @@
         });
 
         // start the game
-        Promise.all([load, connect]).then(async ([resources, _]) => {
+        void Promise.all([load, connect]).then(async ([resources, _]) => {
             const game = new Game(app, ws, resources);
             await game.init();
         });
