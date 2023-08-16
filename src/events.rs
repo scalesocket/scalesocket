@@ -290,7 +290,7 @@ mod tests {
 
     fn create_process() -> (ToProcessRx, ProcessSenders) {
         let (proc_tx, proc_rx) = mpsc::unbounded_channel();
-        let (broadcast_tx, _) = broadcast::channel(16);
+        let broadcast_tx = broadcast::Sender::new(16);
         let (kill_tx, _) = oneshot::channel();
         (proc_rx, (broadcast_tx, proc_tx, kill_tx))
     }

@@ -39,7 +39,7 @@ pub enum Source {
 impl Channel {
     pub fn new(config: &Config, port: Option<PortID>, env: CGIEnv) -> Self {
         let (tx, rx) = mpsc::unbounded_channel::<Message>();
-        let (cast_tx, _) = broadcast::channel(16);
+        let cast_tx = broadcast::Sender::new(16);
         let (kill_tx, kill_rx) = oneshot::channel();
 
         let cmd = run(
