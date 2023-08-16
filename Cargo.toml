@@ -12,7 +12,7 @@ exclude = [".github/", "Dockerfile", "examples/", "docs/"]
 
 [dependencies]
 bytes = "1.4.0"
-clap = { version = "3.2.23", features = ["derive"] }
+clap = { version = "4.3.21", features = ["derive"] }
 futures = "0.3.28"
 id-pool = { version = "0.2.2", default-features = false, features = ["u16"] }
 num-traits = "0.2"

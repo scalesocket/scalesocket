@@ -1,5 +1,6 @@
 use crate::types::Frame;
 use {
+    clap::builder::ArgPredicate,
     clap::{ArgAction, Parser},
     std::net::SocketAddr,
     std::ops::Range,
@@ -63,7 +64,7 @@ pub struct Config {
         value_parser,
         value_name = "MODE",
         default_missing_value = "binary",
-        min_values = 0,
+        num_args = 0..,
         require_equals = true,
         hide_possible_values = true
     )]
@@ -124,7 +125,7 @@ pub struct Config {
     #[clap(
         long,
         value_name = "SECONDS",
-        default_value_if("tcp", Some("true"), Some("1"))
+        default_value_if("tcp",  ArgPredicate::Equals("true".into()), Some("1"))
     )]
     pub cmd_attach_delay: Option<u64>,
 
