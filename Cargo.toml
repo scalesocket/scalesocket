@@ -8,11 +8,11 @@ description = "A websocket server and autoscaler"
 homepage = "https://scalesocket.org/"
 repository = "https://github.com/scalesocket/scalesocket/"
 keywords = ["websockets", "gamedev", "server"]
-exclude = [".github/", "Dockerfile", "examples/", "docs/"]
+exclude = [".github/", ".tool-versions", "Dockerfile", "docs/", "examples/"]
 
 [dependencies]
 bytes = "1.4.0"
-clap = { version = "3.2.23", features = ["derive"] }
+clap = { version = "4.3.21", features = ["derive"] }
 futures = "0.3.28"
 id-pool = { version = "0.2.2", default-features = false, features = ["u16"] }
 num-traits = "0.2"
@@ -24,7 +24,7 @@ thiserror = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json"] }
 trycmd = "0.14"
-tokio = { version = "1.29", features = ["full", "tracing"] }
+tokio = { version = "1.31", features = ["full", "tracing"] }
 tokio-stream = { version = "0.1.14", features = ["sync", "net", "io-util"] }
 tokio-util = { version = "0.7.8", features = ["io"] }
 urlencoding = "2.1"
