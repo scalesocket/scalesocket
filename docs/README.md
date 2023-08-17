@@ -35,7 +35,8 @@ Below is an example websocket echo server in three lines of Python. No netcode r
 
 {% capture code %}
 ```python
-from sys import stdin
+#!/usr/bin/python -u
+from sys import stdin, stdout
 
 for message in stdin:
     print(f"hello {message}")

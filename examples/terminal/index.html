@@ -4,10 +4,9 @@
 <head>
     <title>Terminal Streaming Example using ScaleSocket</title>
     <meta charset="utf-8" />
-    <script src=" https://cdn.jsdelivr.net/npm/xterm@5.2.1/lib/xterm.min.js "></script>
-    <script src=" https://cdn.jsdelivr.net/npm/xterm-addon-attach@0.8.0/lib/xterm-addon-attach.min.js "></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.2.1/lib/xterm.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-attach@0.8.0/lib/xterm-addon-attach.min.js"></script>
-    <link href=" https://cdn.jsdelivr.net/npm/xterm@5.2.1/css/xterm.min.css " rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/xterm@5.2.1/css/xterm.min.css" rel="stylesheet">
     <style>
         body { background-color: #e2e8f0; font-family: Arial, Helvetica, sans-serif; text-align: center; }
         #terminal { margin: 0 auto; max-width: 48rem; }
@@ -28,8 +27,9 @@
             </select></p>
     </div>
     <div id="terminal"></div>
-    <p>Multiplayer terminal <a href="https://github.com/alexdantas/nsnake/" target="_blank">snake</a>. Try opening
-        multiple instances. Built with <a href="https://www.scalesocket.org/man/examples/terminal" target="_blank">ScaleSocket</a>.</p>
+    <p>"Multiplayer" terminal snake. Hit q to reset. Try opening
+        multiple instances. Built with <a href="https://www.scalesocket.org/man/examples/terminal"
+            target="_blank">ScaleSocket</a>. This demo is not mobile friendly.</p>
     <script>
         const $ = document.querySelector.bind(document);
         const protocol = window.location.protocol === "https:" ? "wss" : "ws";
@@ -48,9 +48,10 @@
         term.loadAddon(attachAddon);
         term.open(element);
 
-
         ws.addEventListener("open", (event) => {
-            $('.xterm-helper-textarea').focus();
+           $('.xterm-helper-textarea').focus();
+           // some magic escape sequence to make input work for late-joiners
+           term.write('\x1b)0\x1b7\x1b[?47h\x1b[1;24r\x1b[m\x1b[4l\x1b[?1h\x1b=');
         });
     </script>
 </body>

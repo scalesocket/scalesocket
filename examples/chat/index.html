@@ -4,6 +4,7 @@
 <head>
     <title>Chat Example using ScaleSocket</title>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body { background-color: #e2e8f0; font-family: Arial, Helvetica, sans-serif; margin: 0; text-align: center; }
         #chat { margin: 0 auto; height: 50vh; display: flex; flex-direction: column; text-align: left; max-width: 48rem; }
@@ -11,6 +12,7 @@
         #message { display: flex; flex-direction: row; }
         .input-rounded { display: flex; border: 0; padding: 0.25rem; margin: 0.5rem; border-radius: 0.75rem; }
         .grow { flex-grow: 1; }
+        .shrink { flex-shrink: 1; min-width: 0;  }
     </style>
 </head>
 
@@ -32,14 +34,15 @@
     <div id="chat">
         <div id="messages" class="grow"></div>
         <div id="message">
-            <input name="nick" placeholder="nick" class="input-rounded" value="anonymous" />
+            <input name="nick" placeholder="nick" class="input-rounded shrink" value="anonymous" />
             <input name="message" placeholder="connecting..." class="input-rounded grow" disabled />
         </div>
     </div>
     <script>
         const $ = document.querySelector.bind(document);
         const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-        const room = window.location.hash.substr(1) || "default";
+        const params = new URLSearchParams(document.location.search);
+        const room = params.get("room") ?? 'default';
 
         // connect to websocket server and room based on URL
         const ws = new WebSocket(`${protocol}:${window.location.host}/${room}`);
