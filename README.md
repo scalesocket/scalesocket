@@ -1,3 +1,7 @@
+---
+title: Introduction
+---
+
 # ScaleSocket
 
 [![Build status](https://github.com/scalesocket/scalesocket/actions/workflows/ci.yml/badge.svg)](https://github.com/scalesocket/scalesocket/actions)
@@ -10,10 +14,7 @@
 
 ## About
 
-ScaleSocket lets you to wrap a script or binary, and serve it over websockets.
-Clients then connect to *rooms* at `wss://example.com/exampleroom`.
-Connecting to a room spawns a new process of the wrapped binary.
-Subsequent connections to the same room share the process.
+ScaleSocket is a command line tool that lets you to wrap a script or binary, and serve it over websockets. Clients then connect to *rooms* (a.k.a. channels) which have a unique URL (`wss://example.com/exampleroom`). Connecting to a room spawns a new process of the wrapped binary. Subsequent connections to the same room share the process.
 
 ## Documentation
 
@@ -65,3 +66,11 @@ $ curl --include \
 ```
 
 For more advanced usage and features, see [usage](https://www.scalesocket.org/man/usage.md).
+
+## License
+
+* Apache License, Version 2.0 ([LICENSE](https://github.com/scalesocket/scalesocket/blob/HEAD/LICENSE) or [www.apache.org](http://www.apache.org/licenses/LICENSE-2.0))
+
+## Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be licensed as above, without any additional terms or conditions.

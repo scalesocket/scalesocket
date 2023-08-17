@@ -15,7 +15,7 @@ Simple way to build multiplayer backends.
 
 ## What is ScaleSocket?
 
-ScaleSocket lets you to wrap a script or binary, and serve it over websockets. Clients then connect to *rooms* which have an unique URL (`wss://example.com/exampleroom`). Connecting to a room spawns a new process of the wrapped binary. Subsequent connections to the same room share the process.
+ScaleSocket is a command line tool that lets you to wrap a script or binary, and serve it over websockets. Clients then connect to *rooms* (a.k.a. channels) which have a unique URL (`wss://example.com/exampleroom`). Connecting to a room spawns a new process of the wrapped binary. Subsequent connections to the same room share the process.
 
 <div class="links">
 
@@ -25,19 +25,13 @@ ScaleSocket lets you to wrap a script or binary, and serve it over websockets. C
 
 </div>
 
-## ScaleSocket vs. Websocketd
-
-ScaleSocket is inteded to be a drop-in replacement for [websocketd](http://websocketd.com/). It supports many of the same features, but allows websocket connections to share a single backend process.
-
-For a full comparison of alternatives, see [comparison](/man/comparison.md).
-
 ## What can it be used for?
 
 ScaleSocket is useful for building and prototyping multiplayer backends. It can be used for chat rooms, multiplayer games and real-time collaboration applications.
 
 ## What does it look like?
 
-Below is an example websocket echo server in three lines of Python. No netcode reqiured, just stdin and stdout.
+Below is an example websocket echo server in three lines of Python. No netcode required, just stdin and stdout.
 
 {% capture code %}
 ```python
@@ -59,10 +53,18 @@ $ scalesocket --addr 0.0.0.0:5000 ./example.py
 
 {% include "_partials/window.md" content: shell, title: "", class: "terminal" %}
 
-A websocket server is now running.
-Clients can connect to rooms at `ws://localhost:5000/<room id>`.
-In this example, messages sent by the server will be forwarded to all participants in the room.
+A websocket server is running! Let's connect to it and send something to see that it works.
 
-This saves us from implementing lobby and room management logic. In fact, it also saves us from implementing any netcode at all for the backend.
+{% capture shell %}
+```console
+$ websocat --no-exit-on-zeromsg ws://127.0.0.1:5000/exampleroom
+▶ world
+◀ hello world
+```
+{% endcapture %}
+
+{% include "_partials/window.md" content: shell, title: "", class: "terminal" %}
+
+Note that multiple clients can share the room. We can also create a new room by connecting to a different route. This saves us from implementing lobby and room management logic. In fact, it also saves us from implementing any netcode at all for the backend.
 
 For more advanced usage and features, see [usage](/man/usage).

@@ -24,6 +24,7 @@ The table highlights which tools support bidirectional communication with a shar
 |[websocketd](http://websocketd.com/)|go|processes|stdio|✓| |bidirectional websocket server|
 |[websocat](https://github.com/vi/websocat)|rust|processes|stdio, tcp|✓| |all-round tool|
 |[gwsocket](https://gwsocket.io/)|c| |stdio, pipes|✓|✓|bidirectional websocket stream|
+|[wsbroad](https://github.com/vi/wsbroad/)|rust| | |✓|✓|websocket broadcaster|
 |[websockify](https://github.com/novnc/websockify)|various|processes|tcp|✓|✓|websocket to TCP proxy|
 |[agones](https://agones.dev/site/docs/overview/)|go|kubernetes|tcp, udp|✓|✓|gameserver scaler|
 |                                                FastCGI|c|processes|stdio| |✓|dynamic websites in 2000's|
