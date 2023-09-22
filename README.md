@@ -67,6 +67,54 @@ $ curl --include \
 
 For more advanced usage and features, see [usage](https://www.scalesocket.org/man/usage.md).
 
+## Architecture
+
+The implementation relies heavily on async tasks and channels.
+The main async tasks and channels (Tx/Rx) are outlined in the diagram below.
+
+```
+┌────────────────────────────────────────┐
+│   ╔════╗     ╔════╗                    │▒
+│   ║ WS ║     ║ WS ║       Internet     │▒
+│   ╚═╦══╝     ╚═╦══╝                    │▒
+╞═╤═══╩══════════╩═════╤═════════════════╡▒
+│ │  routes::handle()  │◀╌╌╌╌╌╌╌┐        │▒
+│ └────────────────────┘        ╎        │▒
+│           │                   ╎        │▒
+│        EventTx            Websocket    │▒
+│           │                   ╎        │▒
+│           ▼                   ╎        │▒
+│ ┌────────────────────┐        ╎        │▒
+│ │  events::handle()  │        ╎        │▒
+│ ├─────────┬──────────┤        ╎        │▒
+│ │ spawn() │ attach() │        ╎        │▒
+│ └────┬────┴────┬─────┘        ╎        │▒
+│      │         │              ╎        │▒
+│      │         │              ▼        │▒
+│      │    ┌────┴─────────────────┐     │▒
+│      │    │ connection::handle() │     │▒
+│      │    └──────────────────────┘     │▒
+│      │         ▲                       │▒
+│      │         │                       │▒
+│      │   FromProcessRx                 │▒
+│      │    ToProcessTx                  │▒
+│      │         │                       │▒
+│      │         ▼                       │▒
+│ ┌────┴──────────────┐                  │▒
+│ │                   │ ◀╌╌╌╌╌╌─┐        │▒
+│ │ process::handle() │         ╎        │▒
+│ │                   │ FromProcessRxAny │▒
+│ ├───────────────────┤  ToProcessTxAny  │▒
+│ │                   │         ╎        │▒
+│ │      spawn()      │         ▼        │▒
+╞═╧═════════╦═════════╧══════════════════╡▒
+│      ╔════╩════╗                       │▒
+│      ║ Process ║             OS        │▒
+│      ╚═════════╝                       │▒
+└────────────────────────────────────────┘▒
+ ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+```
+
 ## License
 
 * Apache License, Version 2.0 ([LICENSE](https://github.com/scalesocket/scalesocket/blob/HEAD/LICENSE) or [www.apache.org](http://www.apache.org/licenses/LICENSE-2.0))
