@@ -1,9 +1,3 @@
-use crate::{
-    error::{AppError, AppResult},
-    message::serialize,
-    types::{ConnID, Framing, FromProcessRx, ToProcessTx},
-};
-
 use {
     futures::{future::ready, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
     sender_sink::wrappers::UnboundedSenderSink,
@@ -13,6 +7,12 @@ use {
     tokio_stream::wrappers::BroadcastStream,
     tracing::instrument,
     warp::ws::WebSocket,
+};
+
+use crate::{
+    error::{AppError, AppResult},
+    message::serialize,
+    types::{ConnID, Framing, FromProcessRx, ToProcessTx},
 };
 
 #[instrument(parent = None, name = "connection", skip_all)]

@@ -1,11 +1,3 @@
-use crate::{
-    cli::Config,
-    envvars::Env,
-    metrics::Metrics,
-    types::{Event, EventTx, RoomID, ShutdownRx},
-    utils::warpext::{self, handle_rejection},
-};
-
 use {
     prometheus_client::encoding::text::encode,
     prometheus_client::registry::Registry,
@@ -13,6 +5,14 @@ use {
     std::path::PathBuf,
     warp::ws::Ws,
     warp::{self, http::Response, Filter, Rejection, Reply},
+};
+
+use crate::{
+    cli::Config,
+    envvars::Env,
+    metrics::Metrics,
+    types::{Event, EventTx, RoomID, ShutdownRx},
+    utils::warpext::{self, handle_rejection},
 };
 
 const RESERVED_ROOMS: &[&str] = &["api", "metrics", "health", "static"];
@@ -145,11 +145,11 @@ pub fn files(
 mod tests {
     use prometheus_client::metrics::counter::Counter;
     use prometheus_client::metrics::family::Family;
+    use serde_json::{self, Value};
     use warp::http::StatusCode;
     use warp::test::request;
 
     use super::*;
-    use serde_json::{self, Value};
 
     #[tokio::test]
     async fn health_returns_ok() {

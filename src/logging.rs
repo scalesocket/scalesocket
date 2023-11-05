@@ -1,5 +1,6 @@
-use crate::cli::Config;
 use tracing_subscriber::{filter::LevelFilter, fmt::layer, prelude::*, Registry};
+
+use crate::cli::Config;
 
 pub fn setup_logging(config: &Config) {
     let level = match config.verbosity {

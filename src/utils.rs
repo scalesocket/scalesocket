@@ -1,4 +1,3 @@
-use crate::types::{ConnID, PortID};
 use {
     std::collections::HashMap,
     std::env,
@@ -6,6 +5,8 @@ use {
     std::sync::atomic::{AtomicU32, Ordering},
     tokio::process::Command,
 };
+
+use crate::types::{ConnID, PortID};
 
 /// Our global unique connection id counter.
 static NEXT_CONNECTION_ID: AtomicU32 = AtomicU32::new(1);
@@ -51,9 +52,11 @@ pub fn exit_code<T>(status: Result<ExitStatus, T>) -> Option<i32> {
 
 /// Utility filters for Warp
 pub mod warpext {
-    use crate::envvars::{CGIEnv, Env};
     use std::{collections::HashMap, convert::Infallible};
+
     use warp::{self, http::StatusCode, reject::Reject, Filter, Rejection, Reply};
+
+    use crate::envvars::{CGIEnv, Env};
 
     pub type One<T> = (T,);
 

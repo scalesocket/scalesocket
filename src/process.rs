@@ -1,9 +1,3 @@
-use crate::{
-    channel::{Channel, Source},
-    error::{AppError, AppResult},
-    types::{ShutdownRxStream, ToProcessRxStream},
-    utils::exit_code,
-};
 use {
     bytes::Bytes,
     futures::TryStreamExt,
@@ -19,6 +13,13 @@ use {
     tokio_util::codec::{BytesCodec, FramedRead},
     tracing::instrument,
     warp::ws::Message,
+};
+
+use crate::{
+    channel::{Channel, Source},
+    error::{AppError, AppResult},
+    types::{ShutdownRxStream, ToProcessRxStream},
+    utils::exit_code,
 };
 
 #[instrument(parent = None, name = "process", skip_all)]

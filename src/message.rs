@@ -1,9 +1,9 @@
-use crate::types::{ConnID, Frame};
-
 use {
     bytes::Bytes, num_derive::FromPrimitive, num_traits::FromPrimitive,
     sender_sink::wrappers::SinkError, serde_json::Value, warp::ws::Message,
 };
+
+use crate::types::{ConnID, Frame};
 
 /// An extension trait for `Message`s that provides routing helpers
 pub trait Address<T> {

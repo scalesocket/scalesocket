@@ -1,6 +1,7 @@
-use crate::types::{Event, EventTx, ShutdownTx};
 use futures::FutureExt;
 use tokio::signal::unix::{signal, SignalKind};
+
+use crate::types::{Event, EventTx, ShutdownTx};
 
 pub async fn handle(routes_shutdown_tx: ShutdownTx, events_shutdown_tx: EventTx) {
     let mut interrupt = signal(SignalKind::interrupt()).expect("failed to create signal");
