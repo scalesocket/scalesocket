@@ -1,4 +1,3 @@
-use crate::types::Frame;
 use {
     clap::builder::ArgPredicate,
     clap::{ArgAction, Parser},
@@ -6,6 +5,8 @@ use {
     std::ops::Range,
     std::path::PathBuf,
 };
+
+use crate::types::Frame;
 
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about, long_about = None)]

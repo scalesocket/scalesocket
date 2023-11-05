@@ -17,12 +17,12 @@ mod utils;
 #[macro_use]
 extern crate num_derive;
 
-use crate::{cli::Config, logging::setup_logging, metrics::Metrics, types::Event};
-
 use {
     clap::Parser, futures::FutureExt, prometheus_client::registry::Registry, tokio::sync,
     tokio::try_join,
 };
+
+use crate::{cli::Config, logging::setup_logging, metrics::Metrics, types::Event};
 
 #[tokio::main]
 async fn main() {

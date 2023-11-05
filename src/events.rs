@@ -1,3 +1,13 @@
+use {
+    futures::{FutureExt, TryFutureExt},
+    id_pool::IdPool as PortPool,
+    std::collections::{HashMap, HashSet},
+    std::sync::Arc,
+    tokio::sync::Barrier,
+    tracing::{instrument, Instrument},
+    warp::ws::{Message, WebSocket},
+};
+
 use crate::{
     channel::Channel,
     cli::Config,
@@ -8,16 +18,6 @@ use crate::{
     process,
     types::{ConnID, Event, EventRx, EventTx, PortID, ProcessSenders, RoomID},
     utils::new_conn_id,
-};
-
-use {
-    futures::{FutureExt, TryFutureExt},
-    id_pool::IdPool as PortPool,
-    std::collections::{HashMap, HashSet},
-    std::sync::Arc,
-    tokio::sync::Barrier,
-    tracing::{instrument, Instrument},
-    warp::ws::{Message, WebSocket},
 };
 
 type ConnectionMap = HashMap<RoomID, HashSet<ConnID>>;
@@ -265,12 +265,9 @@ fn shutdown(state: State) {
 #[cfg(test)]
 mod tests {
 
-    use crate::{
-        cli::Config,
-        types::{ProcessSenders, ToProcessRx},
-    };
-    use clap::Parser;
     use std::collections::{HashMap, HashSet};
+
+    use clap::Parser;
     use tokio::sync::{
         self, broadcast,
         mpsc::{self},
@@ -279,6 +276,10 @@ mod tests {
     use warp::Filter;
 
     use super::{attach, disconnect, Env, Event, PortPool, State};
+    use crate::{
+        cli::Config,
+        types::{ProcessSenders, ToProcessRx},
+    };
 
     fn create_config(args: &'static str) -> Config {
         Config::parse_from(args.split_whitespace())

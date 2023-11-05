@@ -1,4 +1,3 @@
-use crate::types::RoomID;
 use {
     prometheus_client::encoding::EncodeLabelSet,
     prometheus_client::metrics::{counter::Counter, family::Family, gauge::Gauge},
@@ -6,6 +5,8 @@ use {
     std::collections::HashSet,
     std::sync::{Arc, RwLock},
 };
+
+use crate::types::RoomID;
 
 #[derive(Clone, Hash, PartialEq, Eq, EncodeLabelSet, Debug)]
 pub struct Labels {

@@ -1,5 +1,6 @@
-use crate::types::ConnID;
 use {std::collections::HashMap, std::net::SocketAddr, urlencoding::encode};
+
+use crate::types::ConnID;
 
 #[derive(Clone, Debug, Default)]
 pub struct Env {
