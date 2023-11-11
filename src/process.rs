@@ -18,7 +18,7 @@ use {
 use crate::{
     channel::{Channel, Source},
     error::{AppError, AppResult},
-    types::{ShutdownRxStream, ToProcessRxStream},
+    types::{FromProcessRxAny, FromProcessTxAny, ShutdownRxStream, ToProcessRxStream},
     utils::exit_code,
 };
 
@@ -165,9 +165,6 @@ struct RunningProcess {
     proc_tx: FromProcessTxAny,
     kill_rx: ShutdownRxStream,
 }
-
-type FromProcessTxAny = Box<dyn tokio::io::AsyncWrite + Unpin + Send>;
-type FromProcessRxAny = Box<dyn futures::Stream<Item = IOResult<Bytes>> + Unpin + Send>;
 
 impl RunningProcess {
     pub async fn write_child(&mut self, msg: Message, is_binary: bool) -> IOResult<()> {

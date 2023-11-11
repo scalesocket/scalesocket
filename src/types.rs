@@ -1,4 +1,6 @@
 use {
+    bytes::Bytes,
+    std::io::Result as IOResult,
     tokio::sync::{broadcast, mpsc, oneshot},
     tokio_stream::wrappers::UnboundedReceiverStream,
     warp::ws::{Message, WebSocket},
@@ -94,5 +96,7 @@ pub type ShutdownRxStream = futures::future::IntoStream<ShutdownRx>;
 // Channel for passing data from child process
 pub type FromProcessTx = broadcast::Sender<(Option<ConnID>, Message)>;
 pub type FromProcessRx = broadcast::Receiver<(Option<ConnID>, Message)>;
+pub type FromProcessTxAny = Box<dyn tokio::io::AsyncWrite + Unpin + Send>;
+pub type FromProcessRxAny = Box<dyn futures::Stream<Item = IOResult<Bytes>> + Unpin + Send>;
 
 pub type ProcessSenders = (FromProcessTx, ToProcessTx, ShutdownTx);
