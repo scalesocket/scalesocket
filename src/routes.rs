@@ -219,15 +219,16 @@ mod tests {
 
         assert!(resp.status().is_success());
         let body: Vec<Value> = serde_json::from_slice(resp.body()).unwrap();
-        assert!(body.contains(&json!({"name": "foo", "connections": 1})));
-        assert!(body.contains(&json!({"name": "bar", "connections": 1})));
+        assert!(body.contains(&json!({"name": "foo", "connections": 1, "meta": null})));
+        assert!(body.contains(&json!({"name": "bar", "connections": 1, "meta": null})));
     }
 
     #[tokio::test]
     async fn metadata_api_returns_room_metadata() {
         let metrics = Metrics::new(&mut None, true);
-        metrics.inc_ws_connections("foo");
-        metrics.inc_ws_connections("bar");
+        let metadata = json!({"_meta": true, "bar": 123});
+
+        metrics.set_metadata("foo", metadata.clone());
 
         let api = metadata_api(metrics, true);
 
@@ -235,7 +236,7 @@ mod tests {
 
         assert!(resp.status().is_success());
         let body: Value = serde_json::from_slice(resp.body()).unwrap();
-        assert_eq!(body, json!({"name": "foo", "connections": 1}));
+        assert_eq!(body["meta"], metadata);
     }
 
     #[tokio::test]
@@ -273,7 +274,7 @@ mod tests {
 
         assert!(resp.status().is_success());
         let body: Value = serde_json::from_slice(resp.body()).unwrap();
-        assert_eq!(body, json!({"name": "foo", "connections": 1}));
+        assert_eq!(body, json!({"name": "foo", "connections": 1, "meta": null}));
     }
 
     #[tokio::test]
