@@ -54,6 +54,10 @@ pub enum Event {
         code: Option<i32>,
         port: Option<PortID>,
     },
+    ProcessMeta {
+        room: RoomID,
+        value: serde_json::Value,
+    },
     Shutdown,
 }
 

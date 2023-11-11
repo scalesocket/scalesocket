@@ -43,7 +43,10 @@ ScaleSocket can optionally parse, tag and route messages.
 When `--frame=json` is enabled, messages will be parsed and routed, with the following rules:
 * Messages from the client, that are not valid JSON are dropped
 * Messages from the client are tagged with an `_from` field
-* Messages from the server, that contain an `_to` field will be routed to the specific client
+* Messages from the server, that contain a `_to` field will be routed to the specific client
+
+In addition
+* Messages from the server, that contain a `_meta` field set to `true` will be stored in the room metadata, and dropped
 
 ### Binary Framing
 
@@ -104,6 +107,7 @@ See the [CLI Reference](/man/cli.md) and the `--metrics` flag for details.
 
 ScaleSocket can expose a JSON endpoint for retrieving rooms and their metadata.
 
+When `--framing` is set to JSON, additional metadata can be set by the server using messages with a `_meta: true` field.
 This is useful for building a lobby or room list.
 
 See the [CLI Reference](/man/cli.md) and the `--api` flag for details.

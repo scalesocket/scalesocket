@@ -73,6 +73,9 @@ pub async fn handle(
                     break;
                 }
             }
+            Event::ProcessMeta { room, value } => {
+                metrics.set_metadata(&room, value);
+            }
             Event::Shutdown => {
                 break;
             }

@@ -3,6 +3,7 @@ use {
     std::net::{SocketAddr, SocketAddrV4},
     tokio::process::{Child, Command as ProcessCommand},
     tokio::sync::{broadcast, mpsc, oneshot},
+    tracing::warn,
     warp::ws::Message,
 };
 
@@ -90,7 +91,12 @@ impl Channel {
         match deserialize(&msg, self.framing.process_to_socket()) {
             Ok(msg) => match msg {
                 (t, payload) if t.is_meta => {
-                    todo!()
+                    let _ = self.event_tx.as_ref().expect("event_tx to be passed").send(
+                        Event::ProcessMeta {
+                            room: self.room.clone(),
+                            value: serde_json::from_slice(payload).unwrap_or_default(),
+                        },
+                    );
                 }
                 (t, payload) if self.is_binary => {
                     let _ = self.cast_tx.send(Message::binary(payload).header(t));
@@ -100,7 +106,9 @@ impl Channel {
                     let _ = self.cast_tx.send(Message::text(msg).header(t));
                 }
             },
-            Err(_) => {}
+            Err(_) => {
+                warn!(room = self.room, "error deserializing message from process")
+            }
         }
     }
 }
