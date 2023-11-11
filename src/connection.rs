@@ -12,7 +12,7 @@ use {
 use crate::{
     error::{AppError, AppResult},
     message::serialize,
-    types::{ConnID, Framing, FromProcessRx, ToProcessTx},
+    types::{ConnID, Framing, FromProcessRx, Header, ToProcessTx},
 };
 
 #[instrument(parent = None, name = "connection", skip_all)]
@@ -34,11 +34,11 @@ pub async fn handle(
         .filter_map(|(id, msg)| {
             ready(match id {
                 // message is routed to us
-                Some(id) if id == conn => Some(msg),
+                Header { to: Some(id), .. } if id == conn => Some(msg),
                 // message is not routed to us
-                Some(_) => None,
+                Header { to: Some(_), .. } => None,
                 // message is broadcast
-                None => Some(msg),
+                Header { to: None, .. } => Some(msg),
             })
         })
         .map(Ok)
