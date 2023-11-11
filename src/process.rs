@@ -172,13 +172,12 @@ type FromProcessRxAny = Box<dyn futures::Stream<Item = IOResult<Bytes>> + Unpin 
 impl RunningProcess {
     pub async fn write_child(&mut self, msg: Message, is_binary: bool) -> IOResult<()> {
         if is_binary {
-            self.proc_tx.write_all(msg.as_bytes()).await?;
+            self.proc_tx.write_all(msg.as_bytes()).await
         } else {
             self.proc_tx
                 .write_all(&[msg.as_bytes(), b"\n"].concat())
-                .await?;
-        };
-        Ok(())
+                .await
+        }
     }
 }
 
@@ -191,11 +190,23 @@ mod tests {
     use warp::ws::Message;
 
     use super::{handle, spawn};
-    use crate::{channel::Channel, cli::Config, envvars::CGIEnv, message::Address};
+    use crate::{
+        channel::Channel,
+        cli::Config,
+        envvars::CGIEnv,
+        message::Address,
+        types::{Event, EventTx},
+    };
 
     fn create_channel(args: &'static str) -> Channel {
         let config = Config::parse_from(args.split_whitespace());
-        Channel::new(&config, None, CGIEnv::default())
+        Channel::new(&config, None, "room1", CGIEnv::default())
+    }
+
+    fn create_channel_with_event_tx(args: &'static str, event_tx: EventTx) -> Channel {
+        let mut channel = create_channel(args);
+        channel.give_sender(event_tx);
+        channel
     }
 
     #[tokio::test]

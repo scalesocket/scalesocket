@@ -12,8 +12,8 @@ use crate::{
     error::{AppError, AppResult},
     message::{deserialize, Address},
     types::{
-        Framing, FromProcessTx, PortID, ProcessSenders, ShutdownRx, ShutdownTx, ToProcessRx,
-        ToProcessTx,
+        Event, EventTx, Framing, FromProcessTx, PortID, ProcessSenders, RoomID, ShutdownRx,
+        ShutdownTx, ToProcessRx, ToProcessTx,
     },
     utils::run,
 };
@@ -21,6 +21,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Channel {
     pub source: Option<Source>,
+    pub room: RoomID,
     pub is_binary: bool,
     pub attach_delay: Option<u64>,
     pub framing: Framing,
@@ -29,6 +30,7 @@ pub struct Channel {
     pub cast_tx: FromProcessTx,
     pub kill_rx: Option<ShutdownRx>,
     pub kill_tx: Option<ShutdownTx>,
+    pub event_tx: Option<EventTx>,
 }
 
 #[derive(Debug)]
@@ -38,7 +40,7 @@ pub enum Source {
 }
 
 impl Channel {
-    pub fn new(config: &Config, port: Option<PortID>, env: CGIEnv) -> Self {
+    pub fn new(config: &Config, port: Option<PortID>, room: &str, env: CGIEnv) -> Self {
         let (tx, rx) = mpsc::unbounded_channel::<Message>();
         let cast_tx = broadcast::Sender::new(16);
         let (kill_tx, kill_rx) = oneshot::channel();
@@ -61,6 +63,7 @@ impl Channel {
         Self {
             source,
             is_binary: config.binary,
+            room: room.to_string(),
             attach_delay: config.cmd_attach_delay,
             framing: config.into(),
             tx,
@@ -68,6 +71,7 @@ impl Channel {
             cast_tx,
             kill_tx: Some(kill_tx),
             kill_rx: Some(kill_rx),
+            event_tx: None,
         }
     }
 
@@ -78,14 +82,25 @@ impl Channel {
         (proc_tx_broadcast, proc_tx, kill_tx)
     }
 
+    pub fn give_sender(&mut self, event_tx: EventTx) {
+        self.event_tx = Some(event_tx);
+    }
+
     pub fn write_sock(&mut self, msg: Bytes) {
-        if let Ok((id, payload)) = deserialize(&msg, self.framing.process_to_socket()) {
-            if self.is_binary {
-                let _ = self.cast_tx.send(Message::binary(payload).to_some(id));
-            } else {
-                let msg = std::str::from_utf8(payload).unwrap_or_default();
-                let _ = self.cast_tx.send(Message::text(msg).to_some(id));
-            };
+        match deserialize(&msg, self.framing.process_to_socket()) {
+            Ok(msg) => match msg {
+                (t, payload) if t.is_meta => {
+                    todo!()
+                }
+                (t, payload) if self.is_binary => {
+                    let _ = self.cast_tx.send(Message::binary(payload).header(t));
+                }
+                (t, payload) => {
+                    let msg = std::str::from_utf8(payload).unwrap_or_default();
+                    let _ = self.cast_tx.send(Message::text(msg).header(t));
+                }
+            },
+            Err(_) => {}
         }
     }
 }
