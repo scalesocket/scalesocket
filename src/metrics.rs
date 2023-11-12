@@ -2,7 +2,8 @@ use {
     prometheus_client::encoding::EncodeLabelSet,
     prometheus_client::metrics::{counter::Counter, family::Family, gauge::Gauge},
     prometheus_client::registry::Registry,
-    std::collections::HashSet,
+    serde_json::{self, json, Value},
+    std::collections::{HashMap, HashSet},
     std::sync::{Arc, RwLock},
 };
 
@@ -15,6 +16,7 @@ pub struct Labels {
 
 #[derive(Clone)]
 pub struct Metrics {
+    metas: Arc<RwLock<HashMap<String, Value>>>,
     ws_connections_counter: Family<Labels, Counter>,
     ws_connections_open_gauge: Family<Labels, Gauge>,
     // prometheus_client does not expose iterators over `Metrics` or `Labels`
@@ -43,6 +45,7 @@ impl Metrics {
         }
 
         Self {
+            metas: Arc::new(RwLock::new(HashMap::new())),
             ws_connections_counter,
             ws_connections_open_gauge,
             ws_connections_labels,
@@ -92,6 +95,17 @@ impl Metrics {
         }
     }
 
+    pub fn set_metadata(&self, room: &str, mut metadata: Value) {
+        if let Some(obj) = metadata.as_object_mut() {
+            obj.remove("_meta");
+
+            self.metas
+                .write()
+                .expect("poisoned lock")
+                .insert(room.to_owned(), metadata);
+        }
+    }
+
     pub fn clear(&self, room: &str) {
         self.ws_connections_open_gauge.remove(&Labels {
             room: room.to_owned(),
@@ -102,7 +116,7 @@ impl Metrics {
         }
     }
 
-    pub fn get_rooms(&self) -> Vec<serde_json::Value> {
+    pub fn get_rooms(&self) -> Vec<Value> {
         match &self.ws_connections_labels {
             Some(rooms) => rooms
                 .read()
@@ -114,10 +128,11 @@ impl Metrics {
         }
     }
 
-    pub fn get_room(&self, room: RoomID) -> serde_json::Value {
-        serde_json::json!({
-           "name": room,
-           "connections": self.get_room_connections(room)
+    pub fn get_room(&self, room: RoomID) -> Value {
+        json!({
+           "name": room.clone(),
+           "connections": self.get_room_connections(room.clone()),
+           "metadata": self.get_room_metadata(&room)
         })
     }
 
@@ -125,5 +140,9 @@ impl Metrics {
         self.ws_connections_open_gauge
             .get_or_create(&Labels { room })
             .get()
+    }
+
+    pub fn get_room_metadata(&self, room: &str) -> Option<Value> {
+        self.metas.read().expect("poisoned lock").get(room).cloned()
     }
 }

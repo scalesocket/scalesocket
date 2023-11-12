@@ -29,6 +29,7 @@ For full details and installation instructions, see the [documentation](https://
 * Serve static files
 * Expose CGI [environment variables](https://www.rfc-editor.org/rfc/rfc3875.html) to backend process
 * [OpenMetrics](https://github.com/OpenObservability/OpenMetrics) compatible
+* Built-in lobby server for listing rooms
 
 
 ## Quick Start

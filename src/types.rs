@@ -1,4 +1,7 @@
 use {
+    bytes::Bytes,
+    serde::Deserialize,
+    std::io::Result as IOResult,
     tokio::sync::{broadcast, mpsc, oneshot},
     tokio_stream::wrappers::UnboundedReceiverStream,
     warp::ws::{Message, WebSocket},
@@ -9,6 +12,30 @@ use crate::{cli::Config, envvars::Env};
 pub type RoomID = String;
 pub type ConnID = u32;
 pub type PortID = u16;
+
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+pub struct Header {
+    #[serde(rename = "_to")]
+    pub to: Option<ConnID>,
+    #[serde(rename = "_meta", default = "bool::default")]
+    pub is_meta: bool,
+}
+
+impl Header {
+    pub fn to(to: ConnID) -> Self {
+        Header {
+            to: Some(to),
+            is_meta: false,
+        }
+    }
+
+    pub fn broadcast() -> Self {
+        Header {
+            to: None,
+            is_meta: false,
+        }
+    }
+}
 
 #[derive(Debug)]
 pub enum Event {
@@ -26,6 +53,10 @@ pub enum Event {
         room: RoomID,
         code: Option<i32>,
         port: Option<PortID>,
+    },
+    ProcessMeta {
+        room: RoomID,
+        value: serde_json::Value,
     },
     Shutdown,
 }
@@ -92,7 +123,9 @@ pub type ShutdownRx = oneshot::Receiver<()>;
 pub type ShutdownRxStream = futures::future::IntoStream<ShutdownRx>;
 
 // Channel for passing data from child process
-pub type FromProcessTx = broadcast::Sender<(Option<ConnID>, Message)>;
-pub type FromProcessRx = broadcast::Receiver<(Option<ConnID>, Message)>;
+pub type FromProcessTx = broadcast::Sender<(Header, Message)>;
+pub type FromProcessRx = broadcast::Receiver<(Header, Message)>;
+pub type FromProcessTxAny = Box<dyn tokio::io::AsyncWrite + Unpin + Send>;
+pub type FromProcessRxAny = Box<dyn futures::Stream<Item = IOResult<Bytes>> + Unpin + Send>;
 
 pub type ProcessSenders = (FromProcessTx, ToProcessTx, ShutdownTx);

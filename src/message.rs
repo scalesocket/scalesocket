@@ -3,38 +3,39 @@ use {
     sender_sink::wrappers::SinkError, serde_json::Value, warp::ws::Message,
 };
 
-use crate::types::{ConnID, Frame};
+use crate::types::{ConnID, Frame, Header};
 
 /// An extension trait for `Message`s that provides routing helpers
 pub trait Address<T> {
-    fn to(self, to: ConnID) -> (Option<ConnID>, T);
-    fn to_some(self, to: Option<ConnID>) -> (Option<ConnID>, Message);
-    fn broadcast(self) -> (Option<ConnID>, T);
+    fn header(self, header: Header) -> (Header, T);
+    #[cfg(test)]
+    fn to(self, to: ConnID) -> (Header, T);
+    #[cfg(test)]
+    fn broadcast(self) -> (Header, T);
 }
 
 impl Address<Message> for Message {
-    fn to(self, to: ConnID) -> (Option<ConnID>, Message) {
-        (Some(to), self)
+    fn header(self, header: Header) -> (Header, Message) {
+        (header, self)
     }
 
-    fn to_some(self, to: Option<ConnID>) -> (Option<ConnID>, Message) {
-        (to, self)
+    #[cfg(test)]
+    fn to(self, to: ConnID) -> (Header, Message) {
+        (Header::to(to), self)
     }
 
-    fn broadcast(self) -> (Option<ConnID>, Message) {
-        (None, self)
+    #[cfg(test)]
+    fn broadcast(self) -> (Header, Message) {
+        (Header::broadcast(), self)
     }
 }
 
-/// Deserialize message going to client
-pub fn deserialize(
-    msg: &Bytes,
-    frame: Option<Frame>,
-) -> Result<(Option<ConnID>, &[u8]), &'static str> {
+/// Deserialize message coming from process
+pub fn deserialize(msg: &Bytes, frame: Option<Frame>) -> Result<(Header, &[u8]), &'static str> {
     match frame {
         Some(f) => match f {
             Frame::Binary => {
-                let (id, msg_type, length, payload) = parse_binary_header(msg);
+                let (header, msg_type, length, payload) = parse_binary_header(msg);
                 let effective_len = payload.len();
                 let header_len = length as usize;
 
@@ -44,18 +45,15 @@ pub fn deserialize(
                     effective_len, header_len
                 );
 
-                match msg_type {
-                    Some(Type::Binary) => Ok((id, payload)),
-                    Some(Type::Text) => Ok((id, payload)),
-                    None => Err("Unknown message type"),
+                if msg_type.is_none() {
+                    return Err("Unknown message type");
                 }
+
+                Ok((header, payload))
             }
-            Frame::JSON => {
-                let (id, msg) = parse_json_header(msg);
-                Ok((id, msg))
-            }
+            Frame::JSON => Ok(parse_json_header(msg)),
         },
-        None => Ok((None, msg)),
+        None => Ok((Header::broadcast(), msg)),
     }
 }
 
@@ -89,32 +87,21 @@ pub enum Type {
     Binary = 2,
 }
 
-pub fn parse_json_header(msg: &Bytes) -> (Option<ConnID>, &[u8]) {
-    let id = match serde_json::from_slice::<Value>(msg) {
-        Ok(ref payload) => payload
-            .get("_to")
-            .and_then(|v: &Value| v.as_u64())
-            .and_then(|v: u64| u32::try_from(v).ok()),
-        _ => None,
-    };
-    (id, msg)
+pub(crate) fn parse_json_header(msg: &Bytes) -> (Header, &[u8]) {
+    (
+        serde_json::from_slice::<Header>(msg).unwrap_or_default(),
+        msg,
+    )
 }
 
 /// Parse fixed-length 12 byte header consisting of three u32 values in network byte order.
 ///
 /// The header consists of the routing ID, message type and payload length.
 /// Message type is 1 for text and 2 for binary.
-pub fn parse_binary_header(data: &[u8]) -> (Option<ConnID>, Option<Type>, u32, &[u8]) {
+pub(crate) fn parse_binary_header(data: &[u8]) -> (Header, Option<Type>, u32, &[u8]) {
     let mut id_data = [0; 4];
     id_data.copy_from_slice(&data[0..4]);
-
     let id = u32::from_le_bytes(id_data);
-    let id = match id {
-        // message is broadcast
-        0 => None,
-        // message is routed
-        id => Some(id),
-    };
 
     let mut msg_type_data = [0; 4];
     msg_type_data.copy_from_slice(&data[4..8]);
@@ -125,12 +112,20 @@ pub fn parse_binary_header(data: &[u8]) -> (Option<ConnID>, Option<Type>, u32, &
     msg_len_data.copy_from_slice(&data[8..12]);
     let msg_len = u32::from_le_bytes(msg_len_data);
 
-    (id, msg_type, msg_len, &data[12..])
+    let header = match id {
+        // message is broadcast
+        0 => Header::broadcast(),
+        // message is routed
+        id => Header::to(id),
+    };
+
+    (header, msg_type, msg_len, &data[12..])
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_binary_header, Type};
+
+    use super::{parse_binary_header, Header, Type};
 
     #[test]
     fn test_parse_id() {
@@ -141,7 +136,7 @@ mod tests {
         ]
         .concat();
         let (result, _, _, _) = parse_binary_header(&payload);
-        assert_eq!(result, Some(123));
+        assert_eq!(result, Header::to(123));
     }
 
     #[test]
@@ -153,7 +148,7 @@ mod tests {
         ]
         .concat();
         let (result, _, _, _) = parse_binary_header(&payload);
-        assert_eq!(result, None);
+        assert_eq!(result, Header::broadcast());
     }
 
     #[test]

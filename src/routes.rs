@@ -130,6 +130,7 @@ pub fn metadata_api(
         .map(
             move |room: RoomID, metric: Option<String>| match metric.as_deref() {
                 Some("connections") => warp::reply::json(&metrics.get_room_connections(room)),
+                Some("metadata") => warp::reply::json(&metrics.get_room_metadata(&room)),
                 _ => warp::reply::json(&metrics.get_room(room)),
             },
         )
@@ -219,15 +220,14 @@ mod tests {
 
         assert!(resp.status().is_success());
         let body: Vec<Value> = serde_json::from_slice(resp.body()).unwrap();
-        assert!(body.contains(&json!({"name": "foo", "connections": 1})));
-        assert!(body.contains(&json!({"name": "bar", "connections": 1})));
+        assert!(body.contains(&json!({"name": "foo", "connections": 1, "metadata": null})));
+        assert!(body.contains(&json!({"name": "bar", "connections": 1, "metadata": null})));
     }
 
     #[tokio::test]
     async fn metadata_api_returns_room_metadata() {
         let metrics = Metrics::new(&mut None, true);
-        metrics.inc_ws_connections("foo");
-        metrics.inc_ws_connections("bar");
+        metrics.set_metadata("foo", json!({"_meta": true, "bar": 123}));
 
         let api = metadata_api(metrics, true);
 
@@ -235,7 +235,7 @@ mod tests {
 
         assert!(resp.status().is_success());
         let body: Value = serde_json::from_slice(resp.body()).unwrap();
-        assert_eq!(body, json!({"name": "foo", "connections": 1}));
+        assert_eq!(body["metadata"], json!({"bar": 123}));
     }
 
     #[tokio::test]
@@ -273,7 +273,10 @@ mod tests {
 
         assert!(resp.status().is_success());
         let body: Value = serde_json::from_slice(resp.body()).unwrap();
-        assert_eq!(body, json!({"name": "foo", "connections": 1}));
+        assert_eq!(
+            body,
+            json!({"name": "foo", "connections": 1, "metadata": null})
+        );
     }
 
     #[tokio::test]
@@ -282,16 +285,27 @@ mod tests {
         let metrics = Metrics::new(&mut None, true);
         metrics.inc_ws_connections("foo");
         metrics.inc_ws_connections("bar");
+        metrics.set_metadata("foo", json!({"_meta": true, "bar": 123}));
 
         let api = metadata_api(metrics, true);
 
-        let resp = request()
-            .method("GET")
-            .path("/foo/stats/connections")
-            .reply(&api)
-            .await;
-
-        assert!(resp.status().is_success());
-        assert_eq!(resp.body(), "1");
+        assert_eq!(
+            request()
+                .method("GET")
+                .path("/foo/stats/connections")
+                .reply(&api)
+                .await
+                .body(),
+            "1"
+        );
+        assert_eq!(
+            request()
+                .method("GET")
+                .path("/foo/stats/metadata")
+                .reply(&api)
+                .await
+                .body(),
+            "{\"bar\":123}"
+        );
     }
 }
