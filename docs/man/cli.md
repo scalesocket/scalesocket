@@ -51,7 +51,11 @@ Options:
           
           Client messages are tagged with an ID header (u32). Server messages with optional client ID are routed to clients.
           
-          When set to `json` messages are parsed as JSON. Client messages are amended with an "_from" field. Server messages are routed to clients based an optional "_to" field. When set to `binary` messages are parsed according to gwsocket's strict mode. Unparseable messages may be dropped.
+          When set to `json`, messages are parsed as JSON. Client messages are amended with an "_from" field. Server messages are routed to clients based an optional "_to" field.
+          
+          Server messages with `_meta: true` will be dropped, and stored as room metadata accessible via the API.
+          
+          When set to `binary`, messages are parsed according to gwsocket's strict mode. Unparseable messages may be dropped.
           
           See --server-frame and --client-frame for specifying framing independently.
           

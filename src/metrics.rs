@@ -95,11 +95,15 @@ impl Metrics {
         }
     }
 
-    pub fn set_metadata(&self, room: &str, metadata: Value) {
-        self.metas
-            .write()
-            .expect("poisoned lock")
-            .insert(room.to_owned(), metadata);
+    pub fn set_metadata(&self, room: &str, mut metadata: Value) {
+        if let Some(obj) = metadata.as_object_mut() {
+            obj.remove("_meta");
+
+            self.metas
+                .write()
+                .expect("poisoned lock")
+                .insert(room.to_owned(), metadata);
+        }
     }
 
     pub fn clear(&self, room: &str) {
@@ -128,7 +132,7 @@ impl Metrics {
         json!({
            "name": room.clone(),
            "connections": self.get_room_connections(room.clone()),
-           "meta": self.metas.read().expect("poisoned lock").get(&room).cloned()
+           "metadata": self.get_room_metadata(&room)
         })
     }
 
@@ -136,5 +140,9 @@ impl Metrics {
         self.ws_connections_open_gauge
             .get_or_create(&Labels { room })
             .get()
+    }
+
+    pub fn get_room_metadata(&self, room: &str) -> Option<Value> {
+        self.metas.read().expect("poisoned lock").get(room).cloned()
     }
 }
