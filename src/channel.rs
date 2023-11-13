@@ -65,7 +65,7 @@ impl Channel {
             source,
             is_binary: config.binary,
             room: room.to_string(),
-            attach_delay: config.cmd_attach_delay,
+            attach_delay: config.delay,
             framing: config.into(),
             tx,
             rx: Some(rx),

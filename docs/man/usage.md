@@ -25,7 +25,7 @@ Alternatively, the messages can be sent to the target over a TCP socket.
 
 When using TCP mode, the target must be configured to bind to the port specified by the environment variable `PORT`.
 
-See the [CLI Reference](/man/cli.md) and the `--tcp`, `--tcpports` and `--cmd-attach-delay` arguments for details.
+See the [CLI Reference](/man/cli.md) and the `--tcp`, `--tcpports` and `--delay` arguments for details.
 
 ## Rooms
 
@@ -55,7 +55,7 @@ When `--frame=binary` is enabled, ScaleSocket is compatible with [gwsocket](http
 * Messages from the client must set the header type to `0x01` (text)
 * Messages from the server, that contain a nonzero client `id` field will be routed to the specific client
 
-See the [CLI Reference](/man/cli.md) and the `--frame`, `--server-frame` and `--client-frame` arguments for details.
+See the [CLI Reference](/man/cli.md) and the `--frame`, `--serverframe` and `--clientframe` arguments for details.
 
 ## Join and Leave Messages
 

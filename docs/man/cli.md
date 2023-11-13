@@ -29,6 +29,9 @@ Options:
       --json
           Log JSON
 
+      --delay <SECONDS>
+          Delay before attaching to child [default: 1 for --tcp]
+
       --joinmsg <MSG>
           Emit message to child on client connect (use #ID for id)
 
@@ -57,16 +60,16 @@ Options:
           
           When set to `binary`, messages are parsed according to gwsocket's strict mode. Unparseable messages may be dropped.
           
-          See --server-frame and --client-frame for specifying framing independently.
+          See --serverframe and --clientframe for specifying framing independently.
           
           [default: binary when set, possible values: binary, json]
 
-      --client-frame=<MODE>
+      --clientframe=<MODE>
           Enable framing and routing for client originated messages
           
           See --frame for options.
 
-      --server-frame=<MODE>
+      --serverframe=<MODE>
           Enable framing and routing for server originated messages
           
           See --frame for options.
@@ -82,19 +85,16 @@ Options:
           * /api/<ROOM>/         - get room metadata
           * /api/<ROOM>/<METRIC> - get room individual metric
 
+      --tcp
+          Connect to child using TCP instead of stdio. Use PORT to bind
+
       --tcpports <START:END>
           Port range for TCP
           
           [default: 9001:9999]
 
-      --tcp
-          Connect to child using TCP instead of stdio. Use PORT to bind
-
   -v...
           Increase level of verbosity
-
-      --cmd-attach-delay <SECONDS>
-          Delay before attaching to child [default: 1 for --tcp]
 
   -h, --help
           Print help (see a summary with '-h')
