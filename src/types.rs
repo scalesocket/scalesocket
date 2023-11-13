@@ -108,6 +108,13 @@ pub enum Frame {
     Binary,
 }
 
+#[derive(Debug, clap::ValueEnum, Clone, Copy)]
+#[allow(clippy::upper_case_acronyms)]
+pub enum Log {
+    JSON,
+    Text,
+}
+
 // Channel for app events
 pub type EventTx = mpsc::UnboundedSender<Event>;
 pub type EventRx = mpsc::UnboundedReceiver<Event>;

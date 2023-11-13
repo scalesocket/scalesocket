@@ -9,9 +9,7 @@ COPY server.py .
 
 CMD scalesocket --addr 0.0.0.0:5000\
     --staticdir /var/www/public/\
-    --frame=json\
-    --joinmsg '{"t":"Join","_from":#ID}'\
-    --leavemsg '{"t":"Leave","_from":#ID}'\
+    --json\
     --api\
     --metrics\
     /app/server.py

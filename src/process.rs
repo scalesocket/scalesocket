@@ -273,7 +273,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_process_output_server_framed_json() {
-        let channel = create_channel(r#"scalesocket --server-frame=json echo -- {"_to": 0}"#);
+        let channel = create_channel(r#"scalesocket --serverframe=json echo -- {"_to": 0}"#);
         let mut proc_rx = channel.cast_tx.subscribe();
 
         handle(channel, None).await.ok();
@@ -305,7 +305,7 @@ mod tests {
     async fn test_handle_process_output_metadata_json() {
         let (event_tx, mut event_rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
         let channel = create_channel_with_event_tx(
-            r#"scalesocket --server-frame=json echo -- {"_meta": true, "foo": "bar"}"#,
+            r#"scalesocket --serverframe=json echo -- {"_meta": true, "foo": "bar"}"#,
             event_tx,
         );
 
@@ -359,7 +359,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_process_input_client_framed_json() {
-        let channel = create_channel("scalesocket --client-frame=json head -- -n 1");
+        let channel = create_channel("scalesocket --clientframe=json head -- -n 1");
         let mut proc_rx = channel.cast_tx.subscribe();
         let sock_tx = channel.tx.clone();
 

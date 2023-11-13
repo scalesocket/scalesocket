@@ -6,7 +6,7 @@ use {
     std::path::PathBuf,
 };
 
-use crate::types::Frame;
+use crate::types::{Frame, Log};
 
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about, long_about = None)]
@@ -19,17 +19,56 @@ pub struct Config {
     #[clap(short, long, action)]
     pub binary: bool,
 
-    /// Log JSON
-    #[clap(long, action)]
-    pub json: bool,
+    /// Delay before attaching to child [default: 1 for --tcp]
+    #[clap(
+        long = "delay",
+        value_name = "SECONDS",
+        default_value_if("tcp",  ArgPredicate::Equals("true".into()), Some("1"))
+    )]
+    pub delay: Option<u64>,
 
     /// Emit message to child on client connect (use #ID for id)
-    #[clap(long, value_name = "MSG")]
+    #[clap(
+        long,
+        value_name = "MSG",
+        default_value_if("json",  ArgPredicate::Equals("true".into()), Some(r#"{"t":"Join","_from":#ID}"#))
+    )]
     pub joinmsg: Option<String>,
 
+    /// Enable JSON framing with default join and leave messages
+    ///
+    /// This option is equivalent to
+    /// --frame=json --joinmsg '{"t":"Join","_from":#ID}' --leavemsg '{"t":"Leave","_from":#ID}'
+    #[clap(
+        long,
+        action,
+        conflicts_with = "client_frame",
+        conflicts_with = "server_frame",
+        conflicts_with = "frame"
+    )]
+    pub json: bool,
+
     /// Emit message to child on client disconnect (use #ID for id)
-    #[clap(long, value_name = "MSG")]
+    #[clap(
+        long,
+        value_name = "MSG",
+        default_value_if("json",  ArgPredicate::Equals("true".into()), Some(r#"{"t":"Leave","_from":#ID}"#))
+    )]
     pub leavemsg: Option<String>,
+
+    /// Log format
+    ///
+    /// [default: text, possible values: text, json]
+    #[clap(
+        long,
+        action,
+        value_parser,
+        value_name = "FMT",
+        default_value = "text",
+        hide_possible_values = true,
+        hide_default_value = true
+    )]
+    pub log: Log,
 
     /// Expose OpenMetrics endpoint at /metrics
     #[clap(long, action)]
@@ -61,7 +100,7 @@ pub struct Config {
     /// When set to `binary`, messages are parsed according to gwsocket's strict mode.
     /// Unparseable messages may be dropped.
     ///
-    /// See --server-frame and --client-frame for specifying framing independently.
+    /// See --serverframe and --clientframe for specifying framing independently.
     ///
     /// [default: binary when set, possible values: binary, json]
     #[clap(
@@ -70,6 +109,7 @@ pub struct Config {
         value_parser,
         value_name = "MODE",
         default_missing_value = "binary",
+        default_value_if("json",  ArgPredicate::Equals("true".into()), Some("json")),
         num_args = 0..,
         require_equals = true,
         hide_possible_values = true
@@ -80,7 +120,7 @@ pub struct Config {
     ///
     /// See --frame for options.
     #[clap(
-        long,
+        long = "clientframe",
         value_parser,
         value_name = "MODE",
         conflicts_with = "frame",
@@ -93,7 +133,7 @@ pub struct Config {
     ///
     /// See --frame for options.
     #[clap(
-        long,
+        long = "serverframe",
         value_parser,
         value_name = "MODE",
         conflicts_with = "frame",
@@ -115,25 +155,17 @@ pub struct Config {
     #[clap(long, action, alias = "stats", verbatim_doc_comment)]
     pub api: bool,
 
-    /// Port range for TCP
-    #[clap(long, value_parser = parse_ports, value_name = "START:END", default_value = "9001:9999")]
-    pub tcpports: Range<u16>,
-
     /// Connect to child using TCP instead of stdio. Use PORT to bind
     #[clap(long, action)]
     pub tcp: bool,
 
+    /// Port range for TCP
+    #[clap(long, value_parser = parse_ports, value_name = "START:END", default_value = "9001:9999")]
+    pub tcpports: Range<u16>,
+
     /// Increase level of verbosity
     #[clap(short, action = ArgAction::Count)]
     pub verbosity: u8,
-
-    /// Delay before attaching to child [default: 1 for --tcp]
-    #[clap(
-        long,
-        value_name = "SECONDS",
-        default_value_if("tcp",  ArgPredicate::Equals("true".into()), Some("1"))
-    )]
-    pub cmd_attach_delay: Option<u64>,
 
     /// Command to wrap
     #[clap(required = true)]
