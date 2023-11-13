@@ -1,6 +1,6 @@
 use tracing_subscriber::{filter::LevelFilter, fmt::layer, prelude::*, Registry};
 
-use crate::cli::Config;
+use crate::{cli::Config, types::Log};
 
 pub fn setup_logging(config: &Config) {
     let level = match config.verbosity {
@@ -11,7 +11,7 @@ pub fn setup_logging(config: &Config) {
     let subscriber = Registry::default();
 
     // Tracing can only disable layers during runtime using Option<Layer>
-    let (json_log, plain_log) = if config.json {
+    let (json_log, plain_log) = if let Log::JSON = config.log {
         let layer = layer()
             .compact()
             .without_time()

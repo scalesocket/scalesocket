@@ -26,9 +26,6 @@ Options:
   -b, --binary
           Set scalesocket to experimental binary mode
 
-      --json
-          Log JSON
-
       --delay <SECONDS>
           Delay before attaching to child [default: 1 for --tcp]
 
@@ -37,6 +34,11 @@ Options:
 
       --leavemsg <MSG>
           Emit message to child on client disconnect (use #ID for id)
+
+      --log <FMT>
+          Log format
+          
+          [default: text, possible values: text, json]
 
       --metrics
           Expose OpenMetrics endpoint at /metrics

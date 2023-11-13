@@ -6,7 +6,7 @@ use {
     std::path::PathBuf,
 };
 
-use crate::types::Frame;
+use crate::types::{Frame, Log};
 
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about, long_about = None)]
@@ -19,10 +19,6 @@ pub struct Config {
     #[clap(short, long, action)]
     pub binary: bool,
 
-    /// Log JSON
-    #[clap(long, action)]
-    pub json: bool,
-
     /// Delay before attaching to child [default: 1 for --tcp]
     #[clap(
         long = "delay",
@@ -32,12 +28,34 @@ pub struct Config {
     pub delay: Option<u64>,
 
     /// Emit message to child on client connect (use #ID for id)
-    #[clap(long, value_name = "MSG")]
+    #[clap(
+        long,
+        value_name = "MSG",
+        default_value_if("json",  ArgPredicate::Equals("true".into()), Some(r#"{"t":"Join","_from":#ID}"#))
+    )]
     pub joinmsg: Option<String>,
 
     /// Emit message to child on client disconnect (use #ID for id)
-    #[clap(long, value_name = "MSG")]
+    #[clap(
+        long,
+        value_name = "MSG",
+        default_value_if("json",  ArgPredicate::Equals("true".into()), Some(r#"{"t":"Leave","_from":#ID}"#))
+    )]
     pub leavemsg: Option<String>,
+
+    /// Log format
+    ///
+    /// [default: text, possible values: text, json]
+    #[clap(
+        long,
+        action,
+        value_parser,
+        value_name = "FMT",
+        default_value = "text",
+        hide_possible_values = true,
+        hide_default_value = true
+    )]
+    pub log: Log,
 
     /// Expose OpenMetrics endpoint at /metrics
     #[clap(long, action)]
