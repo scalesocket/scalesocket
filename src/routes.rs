@@ -15,7 +15,15 @@ use crate::{
     utils::warpext::{self, handle_rejection},
 };
 
-const RESERVED_ROOMS: &[&str] = &["api", "metrics", "health", "static"];
+const RESERVED_ROOMS: &[&str] = &[
+    "api",
+    "metrics",
+    "health",
+    "static",
+    "upload",
+    "robots.txt",
+    "favicon.ico",
+];
 
 pub fn handle(
     tx: EventTx,
