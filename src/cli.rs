@@ -35,6 +35,19 @@ pub struct Config {
     )]
     pub joinmsg: Option<String>,
 
+    /// Enable JSON framing with default join and leave messages
+    ///
+    /// This option is equivalent to
+    /// --frame=json --joinmsg '{"t":"Join","_from":#ID}' --leavemsg '{"t":"Leave","_from":#ID}'
+    #[clap(
+        long,
+        action,
+        conflicts_with = "client_frame",
+        conflicts_with = "server_frame",
+        conflicts_with = "frame"
+    )]
+    pub json: bool,
+
     /// Emit message to child on client disconnect (use #ID for id)
     #[clap(
         long,
@@ -96,6 +109,7 @@ pub struct Config {
         value_parser,
         value_name = "MODE",
         default_missing_value = "binary",
+        default_value_if("json",  ArgPredicate::Equals("true".into()), Some("json")),
         num_args = 0..,
         require_equals = true,
         hide_possible_values = true

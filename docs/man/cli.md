@@ -32,6 +32,11 @@ Options:
       --joinmsg <MSG>
           Emit message to child on client connect (use #ID for id)
 
+      --json
+          Enable JSON framing with default join and leave messages
+          
+          This option is equivalent to --frame=json --joinmsg '{"t":"Join","_from":#ID}' --leavemsg '{"t":"Leave","_from":#ID}'
+
       --leavemsg <MSG>
           Emit message to child on client disconnect (use #ID for id)
 
