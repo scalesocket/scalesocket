@@ -124,7 +124,7 @@ fn attach(
             .insert(conn);
 
         if is_inserted {
-            tracing::info! { id = conn, "client connected" };
+            tracing::info!(id = conn, "client connected");
 
             // Inform child
             if let Some(ref join_msg_template) = state.cfg.joinmsg {
@@ -141,7 +141,7 @@ fn attach(
 
         // Return callback for connection::handle
         async move |_| {
-            tracing::debug! { id=conn, "client disconnecting" };
+            tracing::debug!(id = conn, "client disconnecting");
             let _ = tx.send(Event::Disconnect { room, conn, env });
         }
     };
@@ -224,7 +224,7 @@ fn disconnect(room: RoomID, env: Env, conn: ConnID, state: &mut State) {
     let is_removed = room_conns.remove(&conn);
 
     if is_removed {
-        tracing::info! { id = conn, "client disconnected" };
+        tracing::info!(id = conn, "client disconnected");
 
         // Inform child
         if let Some(ref leave_msg_template) = state.cfg.leavemsg {
@@ -237,7 +237,7 @@ fn disconnect(room: RoomID, env: Env, conn: ConnID, state: &mut State) {
         if let Some((_, _, kill_tx)) = state.procs.remove(&room) {
             if kill_tx.send(()).is_ok() {
                 // Only log if kill was sent
-                tracing::info! { "all clients disconnected, killing process" };
+                tracing::info!("all clients disconnected, killing process");
             }
         }
     }
@@ -251,7 +251,7 @@ fn exit(room: RoomID, code: Option<i32>, port: Option<PortID>, state: &mut State
     }
 
     if state.procs.contains_key(&room) {
-        tracing::error! { room, code, "process exited" };
+        tracing::error!(room, code, "process exited");
         // TODO inform clients
     }
 }

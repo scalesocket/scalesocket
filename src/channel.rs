@@ -3,7 +3,6 @@ use {
     std::net::{SocketAddr, SocketAddrV4},
     tokio::process::{Child, Command as ProcessCommand},
     tokio::sync::{broadcast, mpsc, oneshot},
-    tracing::warn,
     warp::ws::Message,
 };
 
@@ -107,7 +106,7 @@ impl Channel {
                 }
             },
             Err(_) => {
-                warn!(room = self.room, "error deserializing message from process")
+                tracing::warn!(room = self.room, "error deserializing message from process")
             }
         }
     }
