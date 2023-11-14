@@ -3,3 +3,7 @@ reorder_imports = true
 reorder_modules = true
 
 edition = "2021"
+fn_params_layout = "Tall"
+merge_derives = true
+use_field_init_shorthand = true
+use_try_shorthand = true

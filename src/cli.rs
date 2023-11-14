@@ -152,7 +152,7 @@ pub struct Config {
     /// * /api/rooms/          - list rooms
     /// * /api/<ROOM>/         - get room metadata
     /// * /api/<ROOM>/<METRIC> - get room individual metric
-    #[clap(long, action, alias = "stats", verbatim_doc_comment)]
+    #[clap(long, action, verbatim_doc_comment)]
     pub api: bool,
 
     /// Connect to child using TCP instead of stdio. Use PORT to bind

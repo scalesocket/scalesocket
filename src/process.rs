@@ -31,7 +31,7 @@ pub async fn handle(mut channel: Channel, barrier: Option<Arc<Barrier>>) -> AppR
     let mut proc = spawn(&mut channel).await?;
     let mut child = proc.child.take().unwrap();
 
-    tracing::debug! { "process handler listening to child" };
+    tracing::debug!("process handler listening to child");
 
     let exit_code = loop {
         tokio::select! {
@@ -57,7 +57,7 @@ pub async fn handle(mut channel: Channel, barrier: Option<Arc<Barrier>>) -> AppR
         channel.write_sock(msg);
     }
 
-    tracing::debug! { "process handler done" };
+    tracing::debug!("process handler done");
     Ok(exit_code)
 }
 

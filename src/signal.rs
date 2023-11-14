@@ -10,7 +10,7 @@ pub async fn handle(routes_shutdown_tx: ShutdownTx, events_shutdown_tx: EventTx)
 
     signals.await;
 
-    tracing::info! { "received signal, shutting down" };
+    tracing::info!("received signal, shutting down");
     let _ = routes_shutdown_tx.send(());
     let _ = events_shutdown_tx.send(Event::Shutdown);
 }

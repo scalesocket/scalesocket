@@ -15,7 +15,15 @@ use crate::{
     utils::warpext::{self, handle_rejection},
 };
 
-const RESERVED_ROOMS: &[&str] = &["api", "metrics", "health", "static"];
+const RESERVED_ROOMS: &[&str] = &[
+    "api",
+    "metrics",
+    "health",
+    "static",
+    "upload",
+    "robots.txt",
+    "favicon.ico",
+];
 
 pub fn handle(
     tx: EventTx,
@@ -119,11 +127,7 @@ pub fn metadata_api(
         .or_else(|_| async { Ok::<(Option<String>,), std::convert::Infallible>((None,)) });
 
     warpext::enable_if(enabled)
-        .and(
-            warp::path!("api" / RoomID / ..)
-                .or(warp::path!(RoomID / "stats" / ..))
-                .unify(),
-        )
+        .and(warp::path!("api" / RoomID / ..))
         .and(metric)
         .and(warp::path::end())
         .and(warp::get())
@@ -209,6 +213,7 @@ mod tests {
         let metrics = Metrics::new(&mut None, true);
         metrics.inc_ws_connections("foo");
         metrics.inc_ws_connections("bar");
+        metrics.set_metadata("foo", json!({"_meta": true, "bar": 123}));
 
         let api = rooms_api(metrics, true);
 
@@ -220,7 +225,8 @@ mod tests {
 
         assert!(resp.status().is_success());
         let body: Vec<Value> = serde_json::from_slice(resp.body()).unwrap();
-        assert!(body.contains(&json!({"name": "foo", "connections": 1, "metadata": null})));
+        assert!(body
+            .contains(&json!({"name": "foo", "connections": 1, "metadata": json!({"bar": 123})})));
         assert!(body.contains(&json!({"name": "bar", "connections": 1, "metadata": null})));
     }
 
@@ -254,58 +260,5 @@ mod tests {
 
         assert!(resp.status().is_success());
         assert_eq!(resp.body(), "1");
-    }
-
-    #[tokio::test]
-    async fn stats_api_returns_all_statistics() {
-        // NOTE: deprecated
-        let metrics = Metrics::new(&mut None, true);
-        metrics.inc_ws_connections("foo");
-        metrics.inc_ws_connections("bar");
-
-        let api = metadata_api(metrics, true);
-
-        let resp = request()
-            .method("GET")
-            .path("/foo/stats/")
-            .reply(&api)
-            .await;
-
-        assert!(resp.status().is_success());
-        let body: Value = serde_json::from_slice(resp.body()).unwrap();
-        assert_eq!(
-            body,
-            json!({"name": "foo", "connections": 1, "metadata": null})
-        );
-    }
-
-    #[tokio::test]
-    async fn stats_api_returns_single_statistic() {
-        // NOTE: deprecated
-        let metrics = Metrics::new(&mut None, true);
-        metrics.inc_ws_connections("foo");
-        metrics.inc_ws_connections("bar");
-        metrics.set_metadata("foo", json!({"_meta": true, "bar": 123}));
-
-        let api = metadata_api(metrics, true);
-
-        assert_eq!(
-            request()
-                .method("GET")
-                .path("/foo/stats/connections")
-                .reply(&api)
-                .await
-                .body(),
-            "1"
-        );
-        assert_eq!(
-            request()
-                .method("GET")
-                .path("/foo/stats/metadata")
-                .reply(&api)
-                .await
-                .body(),
-            "{\"bar\":123}"
-        );
     }
 }
