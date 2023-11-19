@@ -62,9 +62,7 @@ To do this, start ScaleSocket using:
 ```shell
 scalesocket --addr 0.0.0.0:5000\
     --staticdir /var/www/public/ \
-    --frame=json \
-    --joinmsg '{"t":"Join","_from":#ID}'\
-    --leavemsg '{"t":"Leave","_from":#ID}'\
+    --json\
     server.py
 ```
 

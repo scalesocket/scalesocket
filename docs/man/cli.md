@@ -80,7 +80,7 @@ Options:
           
           See --serverframe and --clientframe for specifying framing independently.
           
-          [default: gwsocket when set, possible values: gwsocket, json]
+          [default: json when set, possible values: gwsocket, json]
 
       --clientframe=<MODE>
           Enable framing and routing for client originated messages

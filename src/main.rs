@@ -135,7 +135,7 @@ mod tests {
     #[tokio::test]
     async fn stdio_e2e_framed_from() {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
-        let config = create_config("scalesocket --oneshot --frame=json head -- -n 1");
+        let config = create_config("scalesocket --oneshot --frame head -- -n 1");
         let metrics = create_metrics();
         let mut client = Client::connect("/example", tx.clone()).await;
 
@@ -151,7 +151,7 @@ mod tests {
     #[tokio::test]
     async fn stdio_e2e_framed_to() {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
-        let config = create_config("scalesocket --oneshot --frame=json head -- -n 1");
+        let config = create_config("scalesocket --oneshot --frame head -- -n 1");
         let metrics = create_metrics();
         let mut client = Client::connect("/example", tx.clone()).await;
 

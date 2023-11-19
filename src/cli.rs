@@ -118,13 +118,12 @@ pub struct Config {
     ///
     /// See --serverframe and --clientframe for specifying framing independently.
     ///
-    /// [default: gwsocket when set, possible values: gwsocket, json]
+    /// [default: json when set, possible values: gwsocket, json]
     #[clap(
         long,
-        alias = "strict",
         value_parser,
         value_name = "MODE",
-        default_missing_value = "gwsocket",
+        default_missing_value = "json",
         default_value_if("json",  ArgPredicate::Equals("true".into()), Some("json")),
         num_args = 0..,
         require_equals = true,

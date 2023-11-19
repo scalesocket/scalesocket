@@ -40,7 +40,7 @@ ScaleSocket can optionally parse, tag and route messages.
 
 ### JSON Framing
 
-When `--frame=json` is enabled, messages will be parsed and routed, with the following rules:
+When `--frame` or `--frame=json` is enabled, messages will be parsed and routed, with the following rules:
 * Messages from the client, that are not valid JSON are dropped
 * Messages from the client are tagged with an `_from` field
 * Messages from the server, that contain a `_to` field will be routed to the specific client

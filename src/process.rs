@@ -263,7 +263,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_process_output_framed_json() {
-        let channel = create_channel(r#"scalesocket --frame=json echo -- {"_to": 0}"#);
+        let channel = create_channel(r#"scalesocket --frame echo -- {"_to": 0}"#);
         let mut proc_rx = channel.cast_tx.subscribe();
 
         handle(channel, None).await.ok();
@@ -284,9 +284,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_handle_process_output_framed_binary() {
+    async fn test_handle_process_output_framed_gwsocket() {
         let channel = create_channel(concat!(
-            "scalesocket --frame printf -- ",
+            "scalesocket --frame=gwsocket printf -- ",
             r"\002\000\000\000", // id
             r"\001\000\000\000", // type
             r"\003\000\000\000", // payload length

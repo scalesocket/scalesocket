@@ -61,7 +61,9 @@ pub fn deserialize(msg: &Bytes, frame: Option<Frame>) -> Result<(Header, &[u8]),
 pub fn serialize(msg: Message, conn: ConnID, frame: Option<Frame>) -> Result<Message, SinkError> {
     match frame {
         Some(f) => match f {
-            Frame::GWSocket => unimplemented!("Client side binary framing has not been implemented"),
+            Frame::GWSocket => {
+                unimplemented!("Client side binary framing has not been implemented")
+            }
             Frame::JSON => match serde_json::from_slice::<Value>(msg.as_bytes()) {
                 Ok(mut v) if v.is_object() => {
                     v["_from"] = Value::from(conn);
