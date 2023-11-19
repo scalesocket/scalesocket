@@ -3,5 +3,6 @@
 !Cargo.*
 !README.md
 !LICENSE
-!docs/
+!docs/**/*.md
+!docs/README.md
 !src/**/*.rs
