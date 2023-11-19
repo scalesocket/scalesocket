@@ -115,6 +115,11 @@ pub enum Log {
     Text,
 }
 
+#[derive(Debug, Clone)]
+pub enum Cache {
+    Messages(usize),
+}
+
 // Channel for app events
 pub type EventTx = mpsc::UnboundedSender<Event>;
 pub type EventRx = mpsc::UnboundedReceiver<Event>;

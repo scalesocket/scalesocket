@@ -6,8 +6,9 @@ use {
     std::path::PathBuf,
 };
 
-use crate::types::{Frame, Log};
+use crate::types::{Cache, Frame, Log};
 
+/// Server configuration
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about, long_about = None)]
 pub struct Config {
@@ -18,6 +19,10 @@ pub struct Config {
     /// Set scalesocket to experimental binary mode
     #[clap(short, long, action)]
     pub binary: bool,
+
+    /// Cache message history and replay to new clients
+    #[clap(long, value_parser = parse_cache, value_name = "[TYPE:]SIZE", verbatim_doc_comment)]
+    pub cache: Option<Cache>,
 
     /// Delay before attaching to child [default: 1 for --tcp]
     #[clap(
@@ -184,4 +189,16 @@ fn parse_ports(arg: &str) -> Result<Range<u16>, &'static str> {
         }
     };
     Err("Could not parse port range")
+}
+
+fn parse_cache(arg: &str) -> Result<Cache, &'static str> {
+    let params = arg
+        .split_once(':')
+        .map(|(t, size)| (t, size.parse()))
+        .or_else(|| Some(("messages", arg.parse())));
+
+    match params {
+        Some(("messages", Ok(n))) if n == 1 || n == 64 => Ok(Cache::Messages(n)),
+        _ => Err("Expected <TYPE>:<SIZE> or <SIZE> where SIZE is 1 or 64"),
+    }
 }
