@@ -271,6 +271,10 @@ fn exit(room: RoomID, code: Option<i32>, port: Option<PortID>, state: &mut State
         tracing::debug!("released port {}", port);
     }
 
+    if !state.cfg.cache_persist {
+        state.cache.remove(&room);
+    }
+
     if state.procs.contains_key(&room) {
         tracing::error!(room, code, "process exited");
         // TODO inform clients

@@ -31,6 +31,10 @@ pub struct Config {
     #[clap(long, value_parser = parse_cache, value_name = "[TYPE:]SIZE", verbatim_doc_comment)]
     pub cache: Option<Cache>,
 
+    #[clap(long = "cachepersist", action)]
+    /// Preserve server message history for room even after last client disconnects
+    pub cache_persist: bool,
+
     /// Delay before attaching to child [default: 1 for --tcp]
     #[clap(
         long = "delay",

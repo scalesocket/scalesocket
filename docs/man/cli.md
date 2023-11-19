@@ -34,6 +34,9 @@ Options:
           When set to `all`, all server messages are cached.
           When set to `tagged`, only server messages with `_cache: true` are cached.
 
+      --cache-persist
+          Preserve server message history for room event after last client disconnects
+
       --delay <SECONDS>
           Delay before attaching to child [default: 1 for --tcp]
 
