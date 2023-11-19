@@ -113,18 +113,18 @@ pub struct Config {
     ///
     /// Server messages with `_meta: true` will be dropped, and stored as room metadata accessible via the API.
     ///
-    /// When set to `binary`, messages are parsed according to gwsocket's strict mode.
+    /// When set to `gwsocket`, messages are parsed according to gwsocket's strict mode.
     /// Unparseable messages may be dropped.
     ///
     /// See --serverframe and --clientframe for specifying framing independently.
     ///
-    /// [default: binary when set, possible values: binary, json]
+    /// [default: gwsocket when set, possible values: gwsocket, json]
     #[clap(
         long,
         alias = "strict",
         value_parser,
         value_name = "MODE",
-        default_missing_value = "binary",
+        default_missing_value = "gwsocket",
         default_value_if("json",  ArgPredicate::Equals("true".into()), Some("json")),
         num_args = 0..,
         require_equals = true,

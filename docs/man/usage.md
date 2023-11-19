@@ -48,9 +48,9 @@ When `--frame=json` is enabled, messages will be parsed and routed, with the fol
 In addition
 * Messages from the server, that contain a `_meta` field set to `true` will be stored in the room metadata, and dropped
 
-### Binary Framing
+### Binary Framing (GWSocket)
 
-When `--frame=binary` is enabled, ScaleSocket is compatible with [gwsocket](https://gwsocket.io/). Messages will be parsed according to the [gwsocket strict mode](https://gwsocket.io/man#man-strict-mode), with the following rules:
+When `--frame=gwsocket` is enabled, ScaleSocket is compatible with [gwsocket](https://gwsocket.io/). Messages will be parsed according to the [gwsocket strict mode](https://gwsocket.io/man#man-strict-mode), with the following rules:
 * Messages from the client, with an invalid header are dropped
 * Messages from the client must set the header type to `0x01` (text)
 * Messages from the server, that contain a nonzero client `id` field will be routed to the specific client
