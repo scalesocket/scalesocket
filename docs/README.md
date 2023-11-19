@@ -1,6 +1,7 @@
 ---
 hide_side_table_of_contents: true
 hide_navigation: true
+title: "Collaborative websocket server and autoscaler"
 ---
 
 <div class="hero">
