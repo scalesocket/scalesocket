@@ -41,6 +41,7 @@ The backend is the ScaleSocket server.
 We want to:
 * let participants join rooms based on URL
 * start a new `cat` process when a new user connects
+* keep a history of 64 messages and send it to joining users
 * host a static html file
 
 To do this, start ScaleSocket using:
@@ -49,6 +50,7 @@ To do this, start ScaleSocket using:
 scalesocket --addr 0.0.0.0:5000\
     --staticdir /var/www/public/\
     --frame\
+    --cache=all:64\
     cat
 ```
 
