@@ -30,7 +30,7 @@ pub async fn handle(
 ) -> AppResult<()> {
     let proc_rx = BroadcastStream::new(proc_rx);
     let (sock_tx, sock_rx) = ws.split();
-    tracing::debug!("connection handler listening to client");
+    tracing::debug!("listening to client");
 
     // forward process and cache to socket
     let cache = cache.into_iter().map(Ok::<_, BroadcastStreamRecvError>);

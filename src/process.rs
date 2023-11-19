@@ -24,14 +24,14 @@ use crate::{
 
 #[instrument(parent = None, name = "process", skip_all)]
 pub async fn handle(mut channel: Channel, barrier: Option<Arc<Barrier>>) -> AppResult<Option<i32>> {
-    if let Some(barrier) = barrier.clone() {
+    if let Some(barrier) = barrier {
         barrier.wait().await;
         tracing::debug!("waited for connection");
     }
     let mut proc = spawn(&mut channel).await?;
     let mut child = proc.child.take().unwrap();
 
-    tracing::debug!("process handler listening to child");
+    tracing::debug!("listening to child");
 
     let exit_code = loop {
         tokio::select! {
