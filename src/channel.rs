@@ -98,7 +98,7 @@ impl Channel {
     pub fn write_sock(&mut self, msg: Bytes) {
         match deserialize(&msg, self.framing.process_to_socket()) {
             Ok(msg) => match msg {
-                (t, payload) if t.is_meta => {
+                (h, payload) if h.is_meta => {
                     let _ = self.event_tx.as_ref().expect("event_tx to be passed").send(
                         Event::ProcessMeta {
                             room: self.room.clone(),
