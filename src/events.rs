@@ -147,7 +147,7 @@ fn attach(
     };
 
     tokio::spawn(
-        connection::handle(*ws, conn, framing, proc_rx, proc_tx.clone(), barrier)
+        connection::handle(*ws, conn, framing, proc_rx, proc_tx.clone(), barrier, None)
             .then({
                 // NOTE: we invoke on_init closure immediately...
                 on_init();
@@ -172,7 +172,7 @@ fn spawn(
         tracing::debug!("reserved port {}", port);
     }
 
-    let mut proc = Channel::new(&state.cfg, port, room, env.cgi.clone());
+    let mut proc = Channel::new(&state.cfg, port, room, env.cgi.clone(), None);
     let senders = proc.take_senders();
     proc.give_sender(tx.clone());
 

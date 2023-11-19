@@ -1,6 +1,7 @@
 use {
     bytes::Bytes,
     std::net::{SocketAddr, SocketAddrV4},
+    std::sync::{Arc, Mutex},
     tokio::process::{Child, Command as ProcessCommand},
     tokio::sync::{broadcast, mpsc, oneshot},
     warp::ws::Message,
@@ -12,8 +13,8 @@ use crate::{
     error::{AppError, AppResult},
     message::{deserialize, Address},
     types::{
-        Event, EventTx, Framing, FromProcessTx, PortID, ProcessSenders, RoomID, ShutdownRx,
-        ShutdownTx, ToProcessRx, ToProcessTx,
+        CacheBuffer, Event, EventTx, Framing, FromProcessTx, PortID, ProcessSenders, RoomID,
+        ShutdownRx, ShutdownTx, ToProcessRx, ToProcessTx,
     },
     utils::run,
 };
@@ -31,6 +32,7 @@ pub struct Channel {
     pub kill_rx: Option<ShutdownRx>,
     pub kill_tx: Option<ShutdownTx>,
     pub event_tx: Option<EventTx>,
+    pub cache: Option<Arc<Mutex<CacheBuffer>>>,
 }
 
 #[derive(Debug)]
@@ -40,7 +42,13 @@ pub enum Source {
 }
 
 impl Channel {
-    pub fn new(config: &Config, port: Option<PortID>, room: &str, env: CGIEnv) -> Self {
+    pub fn new(
+        config: &Config,
+        port: Option<PortID>,
+        room: &str,
+        env: CGIEnv,
+        cache: Option<Arc<Mutex<CacheBuffer>>>,
+    ) -> Self {
         let (tx, rx) = mpsc::unbounded_channel::<Message>();
         let cast_tx = broadcast::Sender::new(16);
         let (kill_tx, kill_rx) = oneshot::channel();
@@ -72,6 +80,7 @@ impl Channel {
             kill_tx: Some(kill_tx),
             kill_rx: Some(kill_rx),
             event_tx: None,
+            cache,
         }
     }
 
@@ -97,12 +106,24 @@ impl Channel {
                         },
                     );
                 }
-                (t, payload) if self.is_binary => {
-                    let _ = self.cast_tx.send(Message::binary(payload).header(t));
+                (h, payload) if self.is_binary => {
+                    let _ = self.cast_tx.send(Message::binary(payload).header(h));
+                    if let Some(cache) = &self.cache {
+                        cache
+                            .lock()
+                            .expect("poisoned lock")
+                            .write(Message::binary(payload));
+                    }
                 }
-                (t, payload) => {
+                (h, payload) => {
                     let msg = std::str::from_utf8(payload).unwrap_or_default();
-                    let _ = self.cast_tx.send(Message::text(msg).header(t));
+                    let _ = self.cast_tx.send(Message::text(msg).header(h));
+                    if let Some(cache) = &self.cache {
+                        cache
+                            .lock()
+                            .expect("poisoned lock")
+                            .write(Message::text(msg));
+                    }
                 }
             },
             Err(_) => {

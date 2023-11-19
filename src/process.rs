@@ -198,7 +198,7 @@ mod tests {
 
     fn create_channel(args: &'static str) -> Channel {
         let config = Config::parse_from(args.split_whitespace());
-        Channel::new(&config, None, "room1", CGIEnv::default())
+        Channel::new(&config, None, "room1", CGIEnv::default(), None)
     }
 
     fn create_channel_with_event_tx(args: &'static str, event_tx: EventTx) -> Channel {
