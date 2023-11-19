@@ -14,6 +14,7 @@ exclude = [".github/", ".tool-versions", "Dockerfile", "docs/", "examples/", "ru
 bytes = "1.4.0"
 clap = { version = "4.3.21", features = ["derive"] }
 futures = "0.3.28"
+heapless = "0.8.0"
 id-pool = { version = "0.2.2", default-features = false, features = ["u16"] }
 num-traits = "0.2"
 num-derive = "0.4"

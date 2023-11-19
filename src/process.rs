@@ -24,14 +24,14 @@ use crate::{
 
 #[instrument(parent = None, name = "process", skip_all)]
 pub async fn handle(mut channel: Channel, barrier: Option<Arc<Barrier>>) -> AppResult<Option<i32>> {
-    if let Some(barrier) = barrier.clone() {
+    if let Some(barrier) = barrier {
         barrier.wait().await;
         tracing::debug!("waited for connection");
     }
     let mut proc = spawn(&mut channel).await?;
     let mut child = proc.child.take().unwrap();
 
-    tracing::debug!("process handler listening to child");
+    tracing::debug!("listening to child");
 
     let exit_code = loop {
         tokio::select! {
@@ -167,6 +167,7 @@ struct RunningProcess {
 }
 
 impl RunningProcess {
+    /// Send a message to the child process
     pub async fn write_child(&mut self, msg: Message, is_binary: bool) -> IOResult<()> {
         if is_binary {
             self.proc_tx.write_all(msg.as_bytes()).await
@@ -198,7 +199,7 @@ mod tests {
 
     fn create_channel(args: &'static str) -> Channel {
         let config = Config::parse_from(args.split_whitespace());
-        Channel::new(&config, None, "room1", CGIEnv::default())
+        Channel::new(&config, None, "room1", CGIEnv::default(), None)
     }
 
     fn create_channel_with_event_tx(args: &'static str, event_tx: EventTx) -> Channel {

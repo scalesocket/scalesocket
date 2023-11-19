@@ -1,6 +1,7 @@
 use {
     bytes::Bytes,
     std::net::{SocketAddr, SocketAddrV4},
+    std::sync::{Arc, Mutex},
     tokio::process::{Child, Command as ProcessCommand},
     tokio::sync::{broadcast, mpsc, oneshot},
     warp::ws::Message,
@@ -12,8 +13,8 @@ use crate::{
     error::{AppError, AppResult},
     message::{deserialize, Address},
     types::{
-        Event, EventTx, Framing, FromProcessTx, PortID, ProcessSenders, RoomID, ShutdownRx,
-        ShutdownTx, ToProcessRx, ToProcessTx,
+        CacheBuffer, Caching, Event, EventTx, Framing, FromProcessTx, PortID, ProcessSenders,
+        RoomID, ShutdownRx, ShutdownTx, ToProcessRx, ToProcessTx,
     },
     utils::run,
 };
@@ -25,12 +26,14 @@ pub struct Channel {
     pub is_binary: bool,
     pub attach_delay: Option<u64>,
     pub framing: Framing,
+    pub caching: Caching,
     pub tx: ToProcessTx,
     pub rx: Option<ToProcessRx>,
     pub cast_tx: FromProcessTx,
     pub kill_rx: Option<ShutdownRx>,
     pub kill_tx: Option<ShutdownTx>,
     pub event_tx: Option<EventTx>,
+    pub cache: Option<Arc<Mutex<CacheBuffer>>>,
 }
 
 #[derive(Debug)]
@@ -40,7 +43,13 @@ pub enum Source {
 }
 
 impl Channel {
-    pub fn new(config: &Config, port: Option<PortID>, room: &str, env: CGIEnv) -> Self {
+    pub fn new(
+        config: &Config,
+        port: Option<PortID>,
+        room: &str,
+        env: CGIEnv,
+        cache: Option<Arc<Mutex<CacheBuffer>>>,
+    ) -> Self {
         let (tx, rx) = mpsc::unbounded_channel::<Message>();
         let cast_tx = broadcast::Sender::new(16);
         let (kill_tx, kill_rx) = oneshot::channel();
@@ -66,12 +75,14 @@ impl Channel {
             room: room.to_string(),
             attach_delay: config.delay,
             framing: config.into(),
+            caching: config.into(),
             tx,
             rx: Some(rx),
             cast_tx,
             kill_tx: Some(kill_tx),
             kill_rx: Some(kill_rx),
             event_tx: None,
+            cache,
         }
     }
 
@@ -86,25 +97,42 @@ impl Channel {
         self.event_tx = Some(event_tx);
     }
 
+    /// Send a message to the socket clients (or event bus)
     pub fn write_sock(&mut self, msg: Bytes) {
+        let write_metadata = |event_tx: Option<&EventTx>, room: &str, value: serde_json::Value| {
+            let _ = event_tx
+                .expect("event_tx to be passed")
+                .send(Event::ProcessMeta {
+                    room: room.to_string(),
+                    value,
+                });
+        };
+        let write_cache = |cache: Option<&Arc<Mutex<CacheBuffer>>>, msg: Message| {
+            if let Some(cache) = cache {
+                cache.lock().expect("poisoned lock").write(msg);
+            }
+        };
+
         match deserialize(&msg, self.framing.process_to_socket()) {
-            Ok(msg) => match msg {
-                (t, payload) if t.is_meta => {
-                    let _ = self.event_tx.as_ref().expect("event_tx to be passed").send(
-                        Event::ProcessMeta {
-                            room: self.room.clone(),
-                            value: serde_json::from_slice(payload).unwrap_or_default(),
-                        },
-                    );
+            Ok((h, _)) if h.is_meta && self.is_binary => {
+                tracing::warn!("binary metadata is not supported");
+            }
+            Ok((h, msg)) if h.is_meta => {
+                let value = serde_json::from_slice(msg).unwrap_or_default();
+                write_metadata(self.event_tx.as_ref(), &self.room, value);
+            }
+            Ok((h, msg)) => {
+                let msg = match self.is_binary {
+                    true => Message::binary(msg),
+                    false => Message::text(std::str::from_utf8(msg).unwrap_or_default()),
+                };
+
+                if self.caching.matches(&h) {
+                    write_cache(self.cache.as_ref(), msg.clone());
                 }
-                (t, payload) if self.is_binary => {
-                    let _ = self.cast_tx.send(Message::binary(payload).header(t));
-                }
-                (t, payload) => {
-                    let msg = std::str::from_utf8(payload).unwrap_or_default();
-                    let _ = self.cast_tx.send(Message::text(msg).header(t));
-                }
-            },
+
+                let _ = self.cast_tx.send(msg.header(h));
+            }
             Err(_) => {
                 tracing::warn!(room = self.room, "error deserializing message from process")
             }

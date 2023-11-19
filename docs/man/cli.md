@@ -26,6 +26,17 @@ Options:
   -b, --binary
           Set scalesocket to experimental binary mode
 
+      --cache <[TYPE:]SIZE>
+          Cache server message history for room and replay it to new clients
+          
+          The cache buffer retains the last <SIZE> chunks, determined by <TYPE>.
+          
+          When set to `all`, all server messages are cached.
+          When set to `tagged`, only server messages with `_cache: true` are cached.
+
+      --cachepersist
+          Preserve server message history for room even after last client disconnects
+
       --delay <SECONDS>
           Delay before attaching to child [default: 1 for --tcp]
 

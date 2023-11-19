@@ -6,8 +6,11 @@ use {
     std::path::PathBuf,
 };
 
-use crate::types::{Frame, Log};
+use crate::types::{Cache, Frame, Log};
 
+const CACHE_SIZES: &[usize; 3] = &[1, 8, 64];
+
+/// Server configuration
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about, long_about = None)]
 pub struct Config {
@@ -18,6 +21,19 @@ pub struct Config {
     /// Set scalesocket to experimental binary mode
     #[clap(short, long, action)]
     pub binary: bool,
+
+    /// Cache server message history for room and replay it to new clients
+    ///
+    /// The cache buffer retains the last <SIZE> chunks, determined by <TYPE>.
+    ///
+    /// When set to `all`, all server messages are cached.
+    /// When set to `tagged`, only server messages with `_cache: true` are cached.
+    #[clap(long, value_parser = parse_cache, value_name = "[TYPE:]SIZE", verbatim_doc_comment)]
+    pub cache: Option<Cache>,
+
+    #[clap(long = "cachepersist", action)]
+    /// Preserve server message history for room even after last client disconnects
+    pub cache_persist: bool,
 
     /// Delay before attaching to child [default: 1 for --tcp]
     #[clap(
@@ -184,4 +200,17 @@ fn parse_ports(arg: &str) -> Result<Range<u16>, &'static str> {
         }
     };
     Err("Could not parse port range")
+}
+
+fn parse_cache(arg: &str) -> Result<Cache, &'static str> {
+    let params = arg
+        .split_once(':')
+        .map(|(t, size)| (t, size.parse()))
+        .or_else(|| Some(("messages", arg.parse())));
+
+    match params {
+        Some(("all", Ok(n))) if CACHE_SIZES.contains(&n) => Ok(Cache::All(n)),
+        Some(("tagged", Ok(n))) if CACHE_SIZES.contains(&n) => Ok(Cache::Tagged(n)),
+        _ => Err("Expected <TYPE>:<SIZE> or <SIZE> where SIZE is 1, 8 or 64"),
+    }
 }

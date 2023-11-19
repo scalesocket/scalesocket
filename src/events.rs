@@ -3,6 +3,7 @@ use {
     id_pool::IdPool as PortPool,
     std::collections::{HashMap, HashSet},
     std::sync::Arc,
+    std::sync::Mutex,
     tokio::sync::Barrier,
     tracing::{instrument, Instrument},
     warp::ws::{Message, WebSocket},
@@ -16,15 +17,17 @@ use crate::{
     error::AppResult,
     metrics::Metrics,
     process,
-    types::{ConnID, Event, EventRx, EventTx, PortID, ProcessSenders, RoomID},
+    types::{CacheBuffer, ConnID, Event, EventRx, EventTx, PortID, ProcessSenders, RoomID},
     utils::new_conn_id,
 };
 
 type ConnectionMap = HashMap<RoomID, HashSet<ConnID>>;
 type ProcessMap = HashMap<RoomID, ProcessSenders>;
+type ProcessCacheMap = HashMap<RoomID, Arc<Mutex<CacheBuffer>>>;
 
 struct State {
     pub conns: ConnectionMap,
+    pub cache: ProcessCacheMap,
     pub procs: ProcessMap,
     pub ports: PortPool,
     pub cfg: Config,
@@ -94,6 +97,7 @@ impl State {
             conns: HashMap::new(),
             procs: HashMap::new(),
             ports: PortPool::new_ranged(cfg.tcpports.clone()),
+            cache: HashMap::new(),
             cfg,
         }
     }
@@ -114,6 +118,12 @@ fn attach(
     // Get process senders from map
     let (proc_tx_broadcast, proc_tx, _) = state.procs.get(&room).expect("room not in process map");
     let proc_rx = proc_tx_broadcast.subscribe();
+
+    // Clone process cache from map for minimal mutex contention
+    let cache = match state.cache.get(&room) {
+        Some(shared) => shared.lock().expect("poisoned lock").to_vec(),
+        None => Vec::new(),
+    };
 
     let mut on_init = || {
         // Store connection handle in map
@@ -147,7 +157,7 @@ fn attach(
     };
 
     tokio::spawn(
-        connection::handle(*ws, conn, framing, proc_rx, proc_tx.clone(), barrier)
+        connection::handle(*ws, conn, framing, proc_rx, proc_tx.clone(), barrier, cache)
             .then({
                 // NOTE: we invoke on_init closure immediately...
                 on_init();
@@ -172,7 +182,18 @@ fn spawn(
         tracing::debug!("reserved port {}", port);
     }
 
-    let mut proc = Channel::new(&state.cfg, port, room, env.cgi.clone());
+    let cache = match state.cfg.cache {
+        Some(ref c) => {
+            state
+                .cache
+                .entry(room.to_string())
+                .or_insert_with(|| Arc::new(Mutex::new(CacheBuffer::new(c))));
+            state.cache.get(room).cloned()
+        }
+        None => None,
+    };
+
+    let mut proc = Channel::new(&state.cfg, port, room, env.cgi.clone(), cache);
     let senders = proc.take_senders();
     proc.give_sender(tx.clone());
 
@@ -250,6 +271,10 @@ fn exit(room: RoomID, code: Option<i32>, port: Option<PortID>, state: &mut State
         tracing::debug!("released port {}", port);
     }
 
+    if !state.cfg.cache_persist {
+        state.cache.remove(&room);
+    }
+
     if state.procs.contains_key(&room) {
         tracing::error!(room, code, "process exited");
         // TODO inform clients
@@ -269,7 +294,10 @@ fn shutdown(state: State) {
 #[cfg(test)]
 mod tests {
 
-    use std::collections::{HashMap, HashSet};
+    use std::{
+        collections::{HashMap, HashSet},
+        sync::{Arc, Mutex},
+    };
 
     use clap::Parser;
     use tokio::sync::{
@@ -277,12 +305,12 @@ mod tests {
         mpsc::{self},
         oneshot,
     };
-    use warp::Filter;
+    use warp::{filters::ws::Message, Filter};
 
     use super::{attach, disconnect, Env, Event, PortPool, State};
     use crate::{
         cli::Config,
-        types::{ProcessSenders, ToProcessRx},
+        types::{Cache, CacheBuffer, ProcessSenders, ToProcessRx},
     };
 
     fn create_config(args: &'static str) -> Config {
@@ -300,7 +328,15 @@ mod tests {
         (proc_rx, (broadcast_tx, proc_tx, kill_tx))
     }
 
-    async fn create_ws() -> warp::ws::WebSocket {
+    fn create_process_with_cache() -> (ToProcessRx, ProcessSenders, CacheBuffer) {
+        let (proc_tx, proc_rx) = mpsc::unbounded_channel();
+        let broadcast_tx = broadcast::Sender::new(16);
+        let (kill_tx, _) = oneshot::channel();
+        let cache = CacheBuffer::new(&Cache::All(8));
+        (proc_rx, (broadcast_tx, proc_tx, kill_tx), cache)
+    }
+
+    async fn create_ws() -> (warp::ws::WebSocket, warp::test::WsClient) {
         // Use channel to move Websocket out of closure (but could use Arc<Mutex>>)
         let (tx, mut rx) = sync::mpsc::unbounded_channel();
 
@@ -313,10 +349,10 @@ mod tests {
             })
         });
 
-        let _ = warp::test::ws().handshake(route).await.expect("handshake");
+        let wsc = warp::test::ws().handshake(route).await.expect("handshake");
         let ws = rx.recv().await.unwrap();
 
-        ws
+        (ws, wsc)
     }
 
     #[tokio::test]
@@ -327,9 +363,10 @@ mod tests {
             procs: HashMap::from([("room1".to_string(), senders)]),
             cfg: create_config("scalesocket cat --joinmsg=foo"),
             ports: PortPool::new(),
+            cache: HashMap::new(),
         };
         let (tx, _) = sync::mpsc::unbounded_channel::<Event>();
-        let ws = create_ws().await;
+        let (ws, _) = create_ws().await;
 
         attach(
             "room1".to_string(),
@@ -351,9 +388,10 @@ mod tests {
             procs: HashMap::from([("room1".to_string(), senders)]),
             cfg: create_config("scalesocket cat --joinmsg=foo"),
             ports: PortPool::new(),
+            cache: HashMap::new(),
         };
         let (tx, _) = sync::mpsc::unbounded_channel::<Event>();
-        let ws = create_ws().await;
+        let (ws, _) = create_ws().await;
 
         attach(
             "room1".to_string(),
@@ -364,9 +402,39 @@ mod tests {
             None,
         );
 
-        let received_event = proc_rx.recv().await.unwrap();
-        let received_msg = std::str::from_utf8(&received_event.as_bytes()).unwrap();
+        let received_msg = proc_rx.recv().await.unwrap();
+        let received_msg = std::str::from_utf8(&received_msg.as_bytes()).unwrap();
         assert_eq!("foo", received_msg);
+    }
+
+    #[tokio::test]
+    async fn test_attach_sends_cache() {
+        let (_proc_rx, senders, mut cache) = create_process_with_cache();
+
+        cache.write(Message::text("foo"));
+        cache.write(Message::text("bar"));
+
+        let mut state = State {
+            conns: HashMap::new(),
+            procs: HashMap::from([("room1".to_string(), senders)]),
+            cfg: create_config("scalesocket --cache=all:64 --joinmsg=baz cat"),
+            ports: PortPool::new(),
+            cache: HashMap::from([("room1".to_string(), Arc::new(Mutex::new(cache)))]),
+        };
+        let (tx, _) = sync::mpsc::unbounded_channel::<Event>();
+        let (ws, mut wsc) = create_ws().await;
+
+        attach(
+            "room1".to_string(),
+            Env::default(),
+            Box::new(ws),
+            &tx,
+            &mut state,
+            None,
+        );
+
+        assert_eq!(wsc.recv().await.unwrap(), Message::text("foo"));
+        assert_eq!(wsc.recv().await.unwrap(), Message::text("bar"));
     }
 
     #[tokio::test]
@@ -379,6 +447,7 @@ mod tests {
             procs: HashMap::from([("room1".to_string(), create_process_senders())]),
             cfg: create_config("scalesocket cat"),
             ports: PortPool::new(),
+            cache: HashMap::new(),
         };
 
         disconnect("room1".to_string(), Env::default(), 1, &mut state);

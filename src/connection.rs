@@ -1,11 +1,14 @@
 use {
+    futures::stream,
     futures::{future::ready, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
     sender_sink::wrappers::UnboundedSenderSink,
     std::sync::Arc,
     tokio::sync::Barrier,
     tokio::try_join,
+    tokio_stream::wrappers::errors::BroadcastStreamRecvError,
     tokio_stream::wrappers::BroadcastStream,
     tracing::instrument,
+    warp::filters::ws::Message,
     warp::ws::WebSocket,
 };
 
@@ -23,13 +26,17 @@ pub async fn handle(
     proc_rx: FromProcessRx,
     proc_tx: ToProcessTx,
     barrier: Option<Arc<Barrier>>,
+    cache: Vec<(Header, Message)>,
 ) -> AppResult<()> {
     let proc_rx = BroadcastStream::new(proc_rx);
     let (sock_tx, sock_rx) = ws.split();
-    tracing::debug!("connection handler listening to client");
+    tracing::debug!("listening to client");
 
-    // forward process to socket
-    let proc_to_sock = proc_rx
+    // forward process and cache to socket
+    let cache = cache.into_iter().map(Ok::<_, BroadcastStreamRecvError>);
+    let proc_rx_and_cache = stream::iter(cache).chain(proc_rx);
+
+    let proc_to_sock = proc_rx_and_cache
         .filter_map(|line| ready(line.ok()))
         .filter_map(|(id, msg)| {
             ready(match id {

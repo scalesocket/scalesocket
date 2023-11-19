@@ -1,5 +1,6 @@
 use {
     bytes::Bytes,
+    heapless::HistoryBuffer,
     serde::Deserialize,
     std::io::Result as IOResult,
     tokio::sync::{broadcast, mpsc, oneshot},
@@ -19,6 +20,8 @@ pub struct Header {
     pub to: Option<ConnID>,
     #[serde(rename = "_meta", default = "bool::default")]
     pub is_meta: bool,
+    #[serde(rename = "_cache", default = "bool::default")]
+    pub is_cache: bool,
 }
 
 impl Header {
@@ -26,6 +29,7 @@ impl Header {
         Header {
             to: Some(to),
             is_meta: false,
+            is_cache: false,
         }
     }
 
@@ -33,6 +37,7 @@ impl Header {
         Header {
             to: None,
             is_meta: false,
+            is_cache: false,
         }
     }
 }
@@ -61,7 +66,7 @@ pub enum Event {
     Shutdown,
 }
 
-/// Composite type for incoming and outgoing framing
+/// Incoming and outgoing framing for a channel
 #[derive(Debug, Clone, Copy)]
 pub enum Framing {
     None,
@@ -113,6 +118,91 @@ pub enum Frame {
 pub enum Log {
     JSON,
     Text,
+}
+
+#[derive(Debug, Clone)]
+pub enum Cache {
+    All(usize),
+    Tagged(usize),
+}
+
+/// Outgoing caching for a channel
+#[derive(Debug, Clone)]
+pub enum Caching {
+    None,
+    All,
+    Tagged,
+}
+
+impl Caching {
+    pub fn matches(&self, h: &Header) -> bool {
+        match self {
+            Self::All => true,
+            Self::Tagged if h.is_cache => true,
+            _ => false,
+        }
+    }
+}
+
+impl From<&Config> for Caching {
+    fn from(cfg: &Config) -> Self {
+        match cfg.cache {
+            Some(Cache::All(_)) => Self::All,
+            Some(Cache::Tagged(_)) => Self::Tagged,
+            None => Self::None,
+        }
+    }
+}
+
+pub type BoxedHistoryBuffer<T, const N: usize> = Box<HistoryBuffer<T, N>>;
+
+#[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
+pub enum CacheBuffer {
+    Single(HistoryBuffer<Message, 1>),
+    Tiny(HistoryBuffer<Message, 8>),
+    Small(BoxedHistoryBuffer<Message, 64>),
+}
+
+impl CacheBuffer {
+    pub fn new(cache: &Cache) -> Self {
+        use Cache::*;
+        match cache {
+            All(1) | Tagged(1) => Self::Single(HistoryBuffer::<_, 1>::new()),
+            All(8) | Tagged(8) => Self::Tiny(HistoryBuffer::<_, 8>::new()),
+            All(64) | Tagged(64) => Self::Small(Box::new(HistoryBuffer::<_, 64>::new())),
+            _ => panic!("invalid cache size"),
+        }
+    }
+
+    pub fn write(&mut self, msg: Message) {
+        match self {
+            Self::Single(h) => h.write(msg),
+            Self::Tiny(h) => h.write(msg),
+            Self::Small(h) => h.write(msg),
+        }
+    }
+
+    /// Returns a copy of the cache content in FIFO order
+    pub fn to_vec(&self) -> Vec<(Header, Message)> {
+        match self {
+            Self::Single(h) => h
+                .oldest_ordered()
+                .cloned()
+                .map(|msg| (Header::broadcast(), msg))
+                .collect(),
+            Self::Tiny(h) => h
+                .oldest_ordered()
+                .cloned()
+                .map(|msg| (Header::broadcast(), msg))
+                .collect(),
+            Self::Small(h) => h
+                .oldest_ordered()
+                .cloned()
+                .map(|msg| (Header::broadcast(), msg))
+                .collect(),
+        }
+    }
 }
 
 // Channel for app events

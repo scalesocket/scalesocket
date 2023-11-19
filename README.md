@@ -1,7 +1,3 @@
----
-title: Introduction
----
-
 # ScaleSocket
 
 [![Build status](https://github.com/scalesocket/scalesocket/actions/workflows/ci.yml/badge.svg)](https://github.com/scalesocket/scalesocket/actions)
@@ -67,54 +63,6 @@ $ curl --include \
 ```
 
 For more advanced usage and features, see [usage](https://www.scalesocket.org/man/usage.md).
-
-## Architecture
-
-The implementation relies heavily on async tasks and channels.
-The main async tasks and channels (Tx/Rx) are outlined in the diagram below.
-
-```
-┌────────────────────────────────────────┐
-│   ╔════╗     ╔════╗                    │▒
-│   ║ WS ║     ║ WS ║       Internet     │▒
-│   ╚═╦══╝     ╚═╦══╝                    │▒
-╞═╤═══╩══════════╩═════╤═════════════════╡▒
-│ │  routes::handle()  │◀╌╌╌╌╌╌╌┐        │▒
-│ └────────────────────┘        ╎        │▒
-│           │                   ╎        │▒
-│        EventTx            Websocket    │▒
-│           │                   ╎        │▒
-│           ▼                   ╎        │▒
-│ ┌────────────────────┐        ╎        │▒
-│ │  events::handle()  │        ╎        │▒
-│ ├─────────┬──────────┤        ╎        │▒
-│ │ spawn() │ attach() │        ╎        │▒
-│ └────┬────┴────┬─────┘        ╎        │▒
-│      │         │              ╎        │▒
-│      │         │              ▼        │▒
-│      │    ┌────┴─────────────────┐     │▒
-│      │    │ connection::handle() │     │▒
-│      │    └──────────────────────┘     │▒
-│      │         ▲                       │▒
-│      │         │                       │▒
-│      │   FromProcessRx                 │▒
-│      │    ToProcessTx                  │▒
-│      │         │                       │▒
-│      │         ▼                       │▒
-│ ┌────┴──────────────┐                  │▒
-│ │                   │ ◀╌╌╌╌╌╌─┐        │▒
-│ │ process::handle() │         ╎        │▒
-│ │                   │ FromProcessRxAny │▒
-│ ├───────────────────┤  ToProcessTxAny  │▒
-│ │                   │         ╎        │▒
-│ │      spawn()      │         ▼        │▒
-╞═╧═════════╦═════════╧══════════════════╡▒
-│      ╔════╩════╗                       │▒
-│      ║ Process ║             OS        │▒
-│      ╚═════════╝                       │▒
-└────────────────────────────────────────┘▒
- ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
-```
 
 ## License
 

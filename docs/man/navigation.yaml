@@ -9,6 +9,8 @@
     href: README.md#quick-start
   - label: Usage
     href: usage.md
+  - label: Advanced Usage
+    href: advanced_usage.md
   - label: Alternatives
     href: comparison.md
 - heading: Examples
