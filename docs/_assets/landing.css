@@ -8,6 +8,7 @@
   margin: 0 !important;
   background-clip: text;
   background: -webkit-linear-gradient(#4ade80, #0891b2);
+  text-align: center;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

@@ -7,7 +7,7 @@ hide_navigation: true
 
 <div class="banner">
 
-# Websocket server and autoscaler
+# Collaborative websocket server and autoscaler
 
 Simple way to build multiplayer backends.
 

@@ -6,7 +6,7 @@ title: "Command Line Arguments"
 
 ```console
 $ scalesocket --help
-A websocket server and autoscaler
+A collaborative websocket server and autoscaler
 
 Usage: scalesocket [OPTIONS] <CMD> [-- <ARGS>...]
 
