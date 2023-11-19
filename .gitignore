@@ -3,4 +3,5 @@
 !Cargo.*
 !README.md
 !LICENSE
+!docs/
 !src/**/*.rs

@@ -38,6 +38,9 @@ Connecting to a room spawns a new process of the wrapped binary or script. Subse
 
 ScaleSocket can optionally parse, tag and route messages.
 
+A convenience option `--json` is provided, which enables JSON framing with default join and leave messages.
+See below for an explanation of these options.
+
 ### JSON Framing
 
 When `--frame` or `--frame=json` is enabled, messages will be parsed and routed, with the following rules:
@@ -74,8 +77,7 @@ $ scalesocket --joinmsg '{"type":"Join","_from":#ID}' ./example.sh
 
 Sends the message `{"type":"Join","_from":123}` to the server when a new client joins. This is useful for keeping track of connected clients.
 
-
-See the [CLI Reference](/man/cli.md) and the `--joinmsg` and `--leavemsg` arguments for details.
+See the [CLI Reference](/man/cli.md) and the `--joinmsg`, `--leavemsg` arguments for details.
 
 ## Static File Hosting
 
