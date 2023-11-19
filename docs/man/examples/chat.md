@@ -48,7 +48,7 @@ To do this, start ScaleSocket using:
 ```shell
 scalesocket --addr 0.0.0.0:5000\
     --staticdir /var/www/public/\
-    --frame=json\
+    --frame\
     cat
 ```
 

@@ -38,9 +38,12 @@ Connecting to a room spawns a new process of the wrapped binary or script. Subse
 
 ScaleSocket can optionally parse, tag and route messages.
 
+A convenience option `--json` is provided, which enables JSON framing with default join and leave messages.
+See below for an explanation of these options.
+
 ### JSON Framing
 
-When `--frame=json` is enabled, messages will be parsed and routed, with the following rules:
+When `--frame` or `--frame=json` is enabled, messages will be parsed and routed, with the following rules:
 * Messages from the client, that are not valid JSON are dropped
 * Messages from the client are tagged with an `_from` field
 * Messages from the server, that contain a `_to` field will be routed to the specific client
@@ -48,9 +51,9 @@ When `--frame=json` is enabled, messages will be parsed and routed, with the fol
 In addition
 * Messages from the server, that contain a `_meta` field set to `true` will be stored in the room metadata, and dropped
 
-### Binary Framing
+### Binary Framing (GWSocket)
 
-When `--frame=binary` is enabled, ScaleSocket is compatible with [gwsocket](https://gwsocket.io/). Messages will be parsed according to the [gwsocket strict mode](https://gwsocket.io/man#man-strict-mode), with the following rules:
+When `--frame=gwsocket` is enabled, ScaleSocket is compatible with [gwsocket](https://gwsocket.io/). Messages will be parsed according to the [gwsocket strict mode](https://gwsocket.io/man#man-strict-mode), with the following rules:
 * Messages from the client, with an invalid header are dropped
 * Messages from the client must set the header type to `0x01` (text)
 * Messages from the server, that contain a nonzero client `id` field will be routed to the specific client
@@ -74,8 +77,7 @@ $ scalesocket --joinmsg '{"type":"Join","_from":#ID}' ./example.sh
 
 Sends the message `{"type":"Join","_from":123}` to the server when a new client joins. This is useful for keeping track of connected clients.
 
-
-See the [CLI Reference](/man/cli.md) and the `--joinmsg` and `--leavemsg` arguments for details.
+See the [CLI Reference](/man/cli.md) and the `--joinmsg`, `--leavemsg` arguments for details.
 
 ## Static File Hosting
 

@@ -34,7 +34,7 @@ impl Address<Message> for Message {
 pub fn deserialize(msg: &Bytes, frame: Option<Frame>) -> Result<(Header, &[u8]), &'static str> {
     match frame {
         Some(f) => match f {
-            Frame::Binary => {
+            Frame::GWSocket => {
                 let (header, msg_type, length, payload) = parse_binary_header(msg);
                 let effective_len = payload.len();
                 let header_len = length as usize;
@@ -61,7 +61,9 @@ pub fn deserialize(msg: &Bytes, frame: Option<Frame>) -> Result<(Header, &[u8]),
 pub fn serialize(msg: Message, conn: ConnID, frame: Option<Frame>) -> Result<Message, SinkError> {
     match frame {
         Some(f) => match f {
-            Frame::Binary => unimplemented!("Client side binary framing has not been implemented"),
+            Frame::GWSocket => {
+                unimplemented!("Client side binary framing has not been implemented")
+            }
             Frame::JSON => match serde_json::from_slice::<Value>(msg.as_bytes()) {
                 Ok(mut v) if v.is_object() => {
                     v["_from"] = Value::from(conn);

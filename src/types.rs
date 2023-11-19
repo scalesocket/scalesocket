@@ -110,7 +110,8 @@ impl From<&Config> for Framing {
 #[allow(clippy::upper_case_acronyms)]
 pub enum Frame {
     JSON,
-    Binary,
+    #[clap(name = "gwsocket")]
+    GWSocket,
 }
 
 #[derive(Debug, clap::ValueEnum, Clone, Copy)]

@@ -55,6 +55,7 @@ The backend is the ScaleSocket server.
 We want to:
 * let players join rooms based on URL
 * start a new `server.py` process when a new user connects
+* send client connect and disconnect events to the server
 * host the static files
 
 To do this, start ScaleSocket using:
