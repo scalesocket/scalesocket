@@ -328,7 +328,7 @@ mod tests {
         let (proc_tx, proc_rx) = mpsc::unbounded_channel();
         let broadcast_tx = broadcast::Sender::new(16);
         let (kill_tx, _) = oneshot::channel();
-        let cache = CacheBuffer::new(&Cache::Messages(64));
+        let cache = CacheBuffer::new(&Cache::All(8));
         (proc_rx, (broadcast_tx, proc_tx, kill_tx), cache)
     }
 
@@ -413,7 +413,7 @@ mod tests {
         let mut state = State {
             conns: HashMap::new(),
             procs: HashMap::from([("room1".to_string(), senders)]),
-            cfg: create_config("scalesocket --cache=messages:64 --joinmsg=baz cat"),
+            cfg: create_config("scalesocket --cache=all:64 --joinmsg=baz cat"),
             ports: PortPool::new(),
             cache: HashMap::from([("room1".to_string(), Arc::new(Mutex::new(cache)))]),
         };

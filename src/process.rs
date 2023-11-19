@@ -167,6 +167,7 @@ struct RunningProcess {
 }
 
 impl RunningProcess {
+    /// Send a message to the child process
     pub async fn write_child(&mut self, msg: Message, is_binary: bool) -> IOResult<()> {
         if is_binary {
             self.proc_tx.write_all(msg.as_bytes()).await
