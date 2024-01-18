@@ -71,6 +71,9 @@ impl Channel {
         };
 
         let mut delimiters = config.delimiters.clone().unwrap_or_default();
+        if config.null {
+            delimiters.push('\0');
+        }
 
         Self {
             source,

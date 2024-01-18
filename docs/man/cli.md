@@ -66,6 +66,9 @@ Options:
       --metrics
           Expose OpenMetrics endpoint at /metrics
 
+      --null
+          Process output items are terminated by a null character
+
       --oneshot
           Serve only once
 

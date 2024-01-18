@@ -44,12 +44,15 @@ pub struct Config {
     pub delay: Option<u64>,
 
     /// Process output items are terminated by given characters
+    ///
+    /// See --null for null termination.
     #[clap(
         long,
         value_parser,
         value_name = "DELIMITERS",
         default_value = "\n",
         default_value_if("binary", ArgPredicate::Equals("true".into()), Some("")),
+        default_value_if("null", ArgPredicate::Equals("true".into()), Some("")),
         require_equals = true,
         conflicts_with = "binary",
     )]
@@ -101,6 +104,10 @@ pub struct Config {
     /// Expose OpenMetrics endpoint at /metrics
     #[clap(long, action)]
     pub metrics: bool,
+
+    /// Process output items are terminated by a null character
+    #[clap(long, action)]
+    pub null: bool,
 
     /// Serve only once.
     #[clap(long)]

@@ -292,6 +292,17 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_handle_process_output_delimiters_null() {
+        let channel = create_channel("scalesocket --null printf -- foo\\0bar");
+        let mut proc_rx = channel.cast_tx.subscribe();
+
+        handle(channel, None).await.ok();
+        let output = proc_rx.recv().await.ok();
+
+        assert_eq!(output, Some(Message::text("foo").broadcast()));
+    }
+
+    #[tokio::test]
     async fn test_handle_process_output_framed_json() {
         let channel = create_channel(r#"scalesocket --frame echo -- {"_to": 0}"#);
         let mut proc_rx = channel.cast_tx.subscribe();
