@@ -39,6 +39,15 @@ See the [CLI Reference](/man/cli.md) and the `--api` flag for details.
 
 ScaleSocket exposes a standard `/health` endpoint for checking readiness.
 
+## Delimiters
+
+ScaleSocket parses output intpo messages by splitting output at newline (`\n`), except when `--binary` mode is enabled.
+
+To alter this behaviour, the `--delimiters` argument can be used to specify a set of custom delimiters.
+For example `--delimiters=,` will split comma-separated output by the target into messages.
+
+To set the delimiter to the null-byte (`\0`), use `--null`. This is useful for outputting multiline messages from the target, for example as a backend for [htmx](https://htmx.org/).
+
 ## Caching
 
 ScaleSocket can optionally cache server sent messages, and send them to new clients when they join a room.
