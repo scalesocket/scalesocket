@@ -43,6 +43,18 @@ pub struct Config {
     )]
     pub delay: Option<u64>,
 
+    /// Process output items are terminated by given characters
+    #[clap(
+        long,
+        value_parser,
+        value_name = "DELIMITERS",
+        default_value = "\n",
+        default_value_if("binary", ArgPredicate::Equals("true".into()), Some("")),
+        require_equals = true,
+        conflicts_with = "binary",
+    )]
+    pub delimiters: Option<String>,
+
     /// Emit message to child on client connect (use #ID for id)
     #[clap(
         long,

@@ -24,6 +24,7 @@ pub struct Channel {
     pub source: Option<Source>,
     pub room: RoomID,
     pub is_binary: bool,
+    pub delimiters: String,
     pub attach_delay: Option<u64>,
     pub framing: Framing,
     pub caching: Caching,
@@ -69,11 +70,14 @@ impl Channel {
             false => Some(Source::Stdio(Command::new(cmd))),
         };
 
+        let mut delimiters = config.delimiters.clone().unwrap_or_default();
+
         Self {
             source,
             is_binary: config.binary,
             room: room.to_string(),
             attach_delay: config.delay,
+            delimiters,
             framing: config.into(),
             caching: config.into(),
             tx,

@@ -2,7 +2,7 @@ use {
     bytes::Bytes,
     futures::TryStreamExt,
     futures::{FutureExt, StreamExt},
-    std::io::Result as IOResult,
+    std::io::{Error as IOError, ErrorKind as IOErrorKind, Result as IOResult},
     std::sync::Arc,
     tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     tokio::net::TcpStream,
@@ -10,7 +10,7 @@ use {
     tokio::sync::Barrier,
     tokio::time::{sleep, Duration},
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
-    tokio_util::codec::{BytesCodec, FramedRead},
+    tokio_util::codec::{AnyDelimiterCodec, BytesCodec, FramedRead},
     tracing::instrument,
     warp::ws::Message,
 };
@@ -90,17 +90,29 @@ async fn spawn(channel: &mut Channel) -> AppResult<RunningProcess> {
                 .ok_or(AppError::ProcessStdIOError("stdout"))?;
 
             let proc_rx: Box<dyn futures::Stream<Item = IOResult<Bytes>> + Unpin + Send> =
-                match channel.is_binary {
-                    true => {
+                match channel.delimiters.as_str() {
+                    "" => {
                         let buffer = BufReader::new(stdout);
                         let stream = FramedRead::new(buffer, BytesCodec::new());
-                        // let stream = ReaderStream::new(buffer);
                         Box::new(stream.map_ok(Bytes::from))
                     }
-                    false => {
+                    "\n" => {
                         let buffer = BufReader::new(stdout);
                         let stream = LinesStream::new(buffer.lines());
                         Box::new(stream.map_ok(Bytes::from))
+                    }
+                    _ => {
+                        let buffer = BufReader::new(stdout);
+                        let delimiters: Vec<u8> = channel.delimiters.clone().into_bytes();
+                        let stream = FramedRead::new(
+                            buffer,
+                            AnyDelimiterCodec::new(delimiters.clone(), delimiters),
+                        );
+                        Box::new(
+                            stream
+                                .map_ok(Bytes::from)
+                                .map_err(|e| IOError::new(IOErrorKind::Other, e)),
+                        )
                     }
                 };
 
@@ -134,16 +146,23 @@ async fn spawn(channel: &mut Channel) -> AppResult<RunningProcess> {
 
             let (rx, tx) = stream.into_split();
             let proc_rx: Box<dyn futures::Stream<Item = IOResult<Bytes>> + Unpin + Send> =
-                match channel.is_binary {
-                    true => {
+                match channel.delimiters.as_str() {
+                    "" => {
                         let buffer = BufReader::new(rx);
                         let stream = FramedRead::new(buffer, BytesCodec::new());
                         Box::new(stream.map_ok(Bytes::from))
                     }
-                    false => {
+                    "\n" => {
                         let buffer = BufReader::new(rx);
                         let stream = LinesStream::new(buffer.lines());
                         Box::new(stream.map_ok(Bytes::from))
+                    }
+                    _ => {
+                        let buffer = BufReader::new(rx);
+                        let delimiters = channel.delimiters.clone().into_bytes();
+                        let codec = AnyDelimiterCodec::new(delimiters, vec![]);
+                        let stream = FramedRead::new(buffer, codec);
+                        Box::new(stream.map_err(|e| IOError::new(IOErrorKind::Other, e)))
                     }
                 };
 
@@ -259,6 +278,17 @@ mod tests {
         let output = proc_rx.recv().await.ok();
 
         assert_eq!(output, Some(Message::binary([10]).broadcast()));
+    }
+
+    #[tokio::test]
+    async fn test_handle_process_output_delimiters_char() {
+        let channel = create_channel("scalesocket --delimiters=bc echo -- foobar");
+        let mut proc_rx = channel.cast_tx.subscribe();
+
+        handle(channel, None).await.ok();
+        let output = proc_rx.recv().await.ok();
+
+        assert_eq!(output, Some(Message::text("foo").broadcast()));
     }
 
     #[tokio::test]

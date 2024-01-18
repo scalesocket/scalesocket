@@ -40,6 +40,13 @@ Options:
       --delay <SECONDS>
           Delay before attaching to child [default: 1 for --tcp]
 
+      --delimiters=<DELIMITERS>
+          Process output items are terminated by given characters
+          
+          See --null for null termination.
+          
+          [default: "/n"]
+
       --joinmsg <MSG>
           Emit message to child on client connect (use #ID for id)
 
