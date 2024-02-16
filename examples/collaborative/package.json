@@ -1,0 +1,17 @@
+{
+  "name": "collaborative",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node index.ts"
+  },
+  "dependencies": {
+    "@codemirror/collab": "6.1.1",
+    "@codemirror/state": "6.4.0",
+    "ts-node": "10.9.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.19"
+  }
+}
