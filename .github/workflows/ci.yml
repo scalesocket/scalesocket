@@ -1,5 +1,6 @@
 name: ci
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "**"
@@ -26,15 +27,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
+
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly
-          profile: minimal
-          override: true
+          toolchain: nighlty
+
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: "true"
+
       - name: Build and Test
         run: cargo test --all-features --locked
 
@@ -44,13 +46,87 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
+
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly
-          profile: minimal
-          override: true
+          toolchain: nighlty
           components: rustfmt
+
       - uses: Swatinem/rust-cache@v2
+
       - name: Check formatting
         run: cargo fmt --all -- --check
+
+  crosscompile:
+    name: ${{ matrix.os }} with rust nightly
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: tar.gz
+            command: cargo
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: tar.gz
+            command: cross
+          - target: aarch64-apple-darwin
+            os: macOS-latest
+            command: cross
+    steps:
+      - name: Install rust
+        if: matrix.command != 'cross'
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nighlty
+          target: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cross
+        if: matrix.command == 'cross'
+        shell: bash
+        run: |
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+          cargo binstall --no-confirm cross
+
+      - name: Log version
+        run: |
+          ${{ matrix.command }} --version
+
+      - name: Build and Test
+        if: matrix.command != 'cross'
+        run: cargo test --all-features --locked
+
+      - name: Build binary
+        run: |
+          ${{ matrix.command }} build --verbose --locked --release --target ${{ matrix.target }}
+          bin="target/${{ matrix.target }}/release/scalesocket"
+          echo "BIN=$bin" >> $GITHUB_ENV
+          echo "ARCHIVE=scalesocket_$version_${{ matrix.target }}" >> $GITHUB_ENV
+
+      - name: Strip release binary (unix)
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: strip "$BIN"
+      
+      - name: Build archive (unix)
+        shell: bash
+        if: matrix.os != 'windows-latest'
+        run: |
+          mkdir -p "$ARCHIVE"
+          cp "$BIN" "$ARCHIVE"/
+          tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+          shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
+          echo "ASSET=$ARCHIVE.tar.gz" >> $GITHUB_ENV
+          echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" >> $GITHUB_ENV
+
+      - name: Publish release artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.ASSET }}
+          path: ${{ env.ASSET }}
+        if: github.ref == 'refs/tags/test-release'
