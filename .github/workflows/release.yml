@@ -7,34 +7,116 @@ on:
 
 jobs:
   release-github:
-    name: release ${{ matrix.target }}
-    runs-on: ubuntu-latest
+    name: Build and Release ${{ matrix.target }} on ${{ matrix.os}}
+    runs-on: ${{ matrix.os }}
     if: github.event_name == 'release'
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
             archive: tar.gz
+            command: cargo
+            strip: x86_64-linux-musl-strip
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: tar.gz
+            command: cross
+            strip: aarch64-linux-musl-strip
+          - target: aarch64-apple-darwin
+            os: macOS-latest
+            command: cargo
     steps:
-      - uses: actions/checkout@master
-      - name: Build and release
-        # https://github.com/rust-build/rust-build.action/issues/62
-        uses: rust-build/rust-build.action@v1.4.0
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract tag
+        id: meta
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+
+      - name: Check tag
+        run: echo ${{ steps.meta.outputs.tag }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2024-02-05
+          target: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # ensure target caches don't overwrite each other
+          # but share the cache accross release jobs
+          shared-key: release-${{ matrix.target }}
+          cache-on-failure: "true"
+
+      - name: Install Cross
+        if: matrix.command == 'cross'
+        shell: bash
+        # work around rust-cache cleaning ~/.cargo/bin with --force
+        run: |
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+          cargo binstall --no-confirm --force cross
+
+      - name: Log version
+        run: |
+          ${{ matrix.command }} --version
+          rustup --version
+          rustup toolchain list
+
+      - name: Build and test
+        if: matrix.command != 'cross'
+        run: cargo test --all-features --locked
+
+      - name: Build binary
+        run: |
+          ${{ matrix.command }} build --verbose --locked --release --target ${{ matrix.target }}
+          bin="target/${{ matrix.target }}/release/scalesocket"
+          echo "BIN=$bin" >> $GITHUB_ENV
+          echo "ARCHIVE=scalesocket_${{ steps.meta.outputs.tag }}_${{ matrix.target }}" >> $GITHUB_ENV
+
+      - name: Strip release binary (macos)
+        if: matrix.os == 'macos-latest' && matrix.strip == ''
+        shell: bash
+        run: strip "$BIN"
+
+      - name: Strip release binary (cross)
+        if: matrix.strip != ''
+        shell: bash
+        run: |
+          docker run --rm -v \
+            "$PWD/target:/target:Z" \
+            "ghcr.io/cross-rs/${{ matrix.target }}:main" \
+            "${{ matrix.strip }}" \
+            "/$BIN"
+
+      - name: Build archive (unix)
+        shell: bash
+        if: matrix.os != 'windows-latest'
+        run: |
+          mkdir -p "$ARCHIVE"
+          cp "$BIN" "$ARCHIVE"/
+          tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+          shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
+          echo "ASSET=$ARCHIVE.tar.gz" >> $GITHUB_ENV
+          echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" >> $GITHUB_ENV
+
+      - name: Publish release artifacts
+        if: steps.meta.outputs.tag != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          ARCHIVE_TYPES: ${{ matrix.archive }}
-          RUSTTARGET: ${{ matrix.target }}
-          TOOLCHAIN_VERSION: nightly
+        shell: bash
+        run: |
+          gh release upload ${{ steps.meta.outputs.tag }} ${{ env.ASSET }} ${{ env.ASSET_SUM }}
 
   release-docker:
-    name: release docker
+    name: Release Docker
     needs: release-github
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Log in to Docker Hub
         uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc
@@ -49,11 +131,16 @@ jobs:
       - name: Check tag
         run: echo ${{ steps.meta.outputs.tag }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push Docker image
-        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825
+        if: steps.meta.outputs.tag != ''
+        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0
         with:
           context: .
-          push: true
+          push: ${{ steps.meta.outputs.tag != 'test' }}
           tags: scalesocket/scalesocket:latest,scalesocket/scalesocket:${{ steps.meta.outputs.tag }}
+          platforms: linux/amd64,linux/arm64
           build-args: |
             VERSION=${{ steps.meta.outputs.tag }}

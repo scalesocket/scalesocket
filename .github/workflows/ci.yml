@@ -25,16 +25,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly
-          profile: minimal
-          override: true
+          toolchain: nightly-2024-02-05
+
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: "true"
+
+      - name: Log version
+        run: |
+          rustc --version
+          cargo --version
+          rustup --version
+
       - name: Build and Test
         run: cargo test --all-features --locked
 
@@ -43,14 +50,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly
-          profile: minimal
-          override: true
+          toolchain: nightly-2024-02-05
           components: rustfmt
+
       - uses: Swatinem/rust-cache@v2
+
       - name: Check formatting
         run: cargo fmt --all -- --check
