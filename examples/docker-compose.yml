@@ -10,6 +10,15 @@ services:
       - ./chat/:/var/www/public
       - ./chat/:/app/
 
+  collaborative:
+    build:
+      context: collaborative/
+    volumes:
+      - ./collaborative/:/var/www/public
+      - ./collaborative/:/app/
+    ports:
+      - "5000:5000"
+
   multiplayer:
     build:
       context: multiplayer/

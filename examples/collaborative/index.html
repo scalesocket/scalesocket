@@ -1,0 +1,123 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>Collaborative Editing Example using ScaleSocket</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="module" src="./utils.js"></script>
+    <style>
+        body { background-color: #e2e8f0; font-family: Arial, Helvetica, sans-serif; margin: 0; text-align: center; }
+        #root { display: flex; flex: 1; background-color: white; text-align: left; height: 20rem; }
+        #root .cm-editor { flex-grow: 1; }
+    </style>
+</head>
+
+<body>
+    <div>
+        <h1>Collaborative Editor Example</h1>
+        <p>Collaborative editor, try opening multiple instances. Built with <a
+                href="https://www.scalesocket.org/man/examples/chat" target="_blank">ScaleSocket</a>.</p>
+        <div id="root"></div>
+    </div>
+
+    <script type="module">
+        import { EditorView, Decoration, keymap, lineNumbers, highlightActiveLine, ViewPlugin } from "https://esm.sh/@codemirror/view@6.23.1"
+        import { Text, EditorState, ChangeSet } from "https://esm.sh/@codemirror/state@6.4.0"
+        import { receiveUpdates, sendableUpdates, collab, getSyncedVersion } from "https://esm.sh/@codemirror/collab@6.1.1"
+        import { Socket } from "./utils.js";
+        const $ = document.querySelector.bind(document);
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const params = new URLSearchParams(document.location.search);
+        const room = params.get("room") ?? 'default';
+
+        // The following pullUpdates, pushUpdates, getDocument and
+        // peerExtension are naive ports of CodeMirror's example
+        // See https://codemirror.net/examples/collab/ for details
+        function pushUpdates(socket, version, fullUpdates) {
+            // Strip off transaction data
+            const updates = fullUpdates.map(u => ({
+                clientID: u.clientID,
+                changes: u.changes.toJSON(),
+                effects: u.effects
+            }))
+            return socket.requestJSON('pushUpdates', { version, updates }).then((msg) => msg.status);
+        }
+
+        function pullUpdates(socket, version) {
+            return socket.requestJSON('pullUpdates', { version }).then((msg) => msg.updates.map((u) => ({
+                changes: ChangeSet.fromJSON(u.changes),
+                clientID: u.clientID
+            })));
+        }
+
+        function getDocument(socket) {
+            return socket.requestJSON('getDocument', {}).then((msg) => {
+                return {
+                    version: msg.version,
+                    doc: Text.of(msg.doc.split("\n"))
+                }
+            });
+        }
+
+        export const peerExtension = (socket, startVersion) => {
+            const plugin = ViewPlugin.fromClass(class {
+                pushing = false
+                done = false
+
+                constructor(view) { this.view = view; this.pull() }
+
+                update(update) {
+                    if (update.docChanged || update.transactions.length) this.push()
+                }
+
+                async push() {
+                    const updates = sendableUpdates(this.view.state)
+                    if (this.pushing || !updates.length) return
+                    this.pushing = true
+                    const version = getSyncedVersion(this.view.state)
+                    const success = await pushUpdates(socket, version, updates)
+                    this.pushing = false
+                    // Regardless of whether the push failed or new updates came in
+                    // while it was running, try again if there's updates remaining
+                    if (sendableUpdates(this.view.state).length)
+                        setTimeout(() => this.push(), 100)
+                }
+
+                async pull() {
+                    while (!this.done) {
+                        const version = getSyncedVersion(this.view.state)
+                        const updates = await pullUpdates(socket, version)
+                        this.view.dispatch(receiveUpdates(this.view.state, updates))
+                    }
+                }
+
+                destroy() { this.done = true }
+            })
+
+            return [collab({ startVersion }), plugin]
+        }
+
+        // connect to websocket server and room based on URL
+        const socket = new Socket(`${protocol}:${window.location.host}/${room}`);
+
+        // start the editor
+        socket.addEventListener('open', async () => {
+            const { version, doc } = await getDocument(socket);
+            new EditorView({
+                state: EditorState.create({
+                    doc,
+                    extensions: [
+                        lineNumbers(),
+                        highlightActiveLine(),
+                        peerExtension(socket, version)]
+                }),
+                parent: $("#root")
+            });
+        });
+
+    </script>
+
+</body>
+
+</html>
