@@ -165,4 +165,4 @@ jobs:
           tags: scalesocket/scalesocket:latest,scalesocket/scalesocket:${{ steps.meta.outputs.tag }}
           platforms: linux/amd64,linux/arm64
           build-args: |
-            VERSION=${{ steps.meta.outputs.tag == 'test' && 'v0.2.2' || steps.meta.outputs.tag }}
+            VERSION=${{ steps.meta.outputs.tag == 'test' && 'v0.2.3' || steps.meta.outputs.tag }}
