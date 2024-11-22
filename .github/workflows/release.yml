@@ -1,9 +1,11 @@
 name: release
 
 on:
-  workflow_dispatch:
+  # Run on release
   release:
     types: [created]
+  # Run on manual trigger
+  workflow_dispatch:
 
 jobs:
   release-github:
