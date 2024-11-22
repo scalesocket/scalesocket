@@ -12,17 +12,17 @@ keywords = ["websockets", "gamedev", "server"]
 exclude = [".github/", ".tool-versions", "Dockerfile", "docs/", "examples/", "rustfmt.toml", "tests/cli_tests.rs"]
 
 [dependencies]
-bytes = "1.4.0"
-clap = { version = "4.3.21", features = ["derive"] }
-futures = "0.3.28"
+bytes = "1.8.0"
+clap = { version = "4.5.21", features = ["derive"] }
+futures = "0.3.31"
 heapless = "0.8.0"
 id-pool = { version = "0.2.2", default-features = false, features = ["u16"] }
 num-traits = "0.2"
 num-derive = "0.4"
 prometheus-client = "0.21.0"
 sender-sink = "0.2.1"
-serde = { version = "1.0.192", features = ["derive"] }
-serde_json = "1.0.93"
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.133"
 thiserror = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json"] }
@@ -30,7 +30,7 @@ tokio = { version = "1.31", features = ["full", "tracing"] }
 tokio-stream = { version = "0.1.14", features = ["sync", "net", "io-util"] }
 tokio-util = { version = "0.7.8", features = ["io"] }
 urlencoding = "2.1"
-warp = "0.3.5"
+warp = "0.3.7"
 
 [dev-dependencies]
 mark-flaky-tests = {version= "1.0.2", features= ["tokio"] }
