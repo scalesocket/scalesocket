@@ -38,7 +38,12 @@ jobs:
 
       - name: Extract tag
         id: meta
-        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [[ "${GITHUB_REF#refs/*/}" == *merge ]]; then
+            echo "tag=test" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Check tag
         run: echo ${{ steps.meta.outputs.tag }}
@@ -131,7 +136,12 @@ jobs:
 
       - name: Extract tag
         id: meta
-        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [[ "${GITHUB_REF#refs/*/}" == *merge ]]; then
+            echo "tag=test" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Check tag
         run: echo ${{ steps.meta.outputs.tag }}
@@ -148,4 +158,4 @@ jobs:
           tags: scalesocket/scalesocket:latest,scalesocket/scalesocket:${{ steps.meta.outputs.tag }}
           platforms: linux/amd64,linux/arm64
           build-args: |
-            VERSION=${{ steps.meta.outputs.tag }}
+            VERSION=${{ steps.meta.outputs.tag == 'test' && 'v0.2.2' || steps.meta.outputs.tag }}
