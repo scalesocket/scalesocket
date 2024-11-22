@@ -4,6 +4,7 @@ version = "0.2.2"
 edition = "2021"
 license = "Apache-2.0"
 
+categories = ["command-line-utilities", "web-programming"]
 description = "A collaborative websocket server and autoscaler"
 homepage = "https://scalesocket.org/"
 repository = "https://github.com/scalesocket/scalesocket/"
