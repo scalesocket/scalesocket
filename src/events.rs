@@ -2,6 +2,7 @@ use {
     futures::{FutureExt, TryFutureExt},
     id_pool::IdPool as PortPool,
     std::collections::{HashMap, HashSet},
+    std::sync::atomic::{AtomicU32, Ordering},
     std::sync::Arc,
     std::sync::Mutex,
     tokio::sync::Barrier,
@@ -18,7 +19,6 @@ use crate::{
     metrics::Metrics,
     process,
     types::{CacheBuffer, ConnID, Event, EventRx, EventTx, PortID, ProcessSenders, RoomID},
-    utils::new_conn_id,
 };
 
 type ConnectionMap = HashMap<RoomID, HashSet<ConnID>>;
@@ -26,6 +26,7 @@ type ProcessMap = HashMap<RoomID, ProcessSenders>;
 type ProcessCacheMap = HashMap<RoomID, Arc<Mutex<CacheBuffer>>>;
 
 struct State {
+    pub conns_next_id: AtomicU32,
     pub conns: ConnectionMap,
     pub cache: ProcessCacheMap,
     pub procs: ProcessMap,
@@ -94,12 +95,17 @@ pub async fn handle(
 impl State {
     pub fn new(cfg: Config) -> Self {
         Self {
+            conns_next_id: AtomicU32::new(1),
             conns: HashMap::new(),
             procs: HashMap::new(),
             ports: PortPool::new_ranged(cfg.tcpports.clone()),
             cache: HashMap::new(),
             cfg,
         }
+    }
+
+    pub fn new_conn_id(&self) -> ConnID {
+        self.conns_next_id.fetch_add(1, Ordering::Relaxed)
     }
 }
 
@@ -112,7 +118,7 @@ fn attach(
     state: &mut State,
     barrier: Option<Arc<Barrier>>,
 ) {
-    let conn = new_conn_id();
+    let conn = state.new_conn_id();
     let framing = (&state.cfg).into();
 
     // Get process senders from map
@@ -297,7 +303,7 @@ mod tests {
 
     use std::{
         collections::{HashMap, HashSet},
-        sync::{Arc, Mutex},
+        sync::{atomic::AtomicU32, Arc, Mutex},
     };
 
     use clap::Parser;
@@ -360,6 +366,7 @@ mod tests {
     async fn test_attach() {
         let (mut proc_rx, senders) = create_process();
         let mut state = State {
+            conns_next_id: AtomicU32::new(1),
             conns: HashMap::new(),
             procs: HashMap::from([("room1".to_string(), senders)]),
             cfg: create_config("scalesocket cat --joinmsg=foo"),
@@ -385,6 +392,7 @@ mod tests {
     async fn test_attach_sends_joinmsg() {
         let (mut proc_rx, senders) = create_process();
         let mut state = State {
+            conns_next_id: AtomicU32::new(1),
             conns: HashMap::new(),
             procs: HashMap::from([("room1".to_string(), senders)]),
             cfg: create_config("scalesocket cat --joinmsg=foo"),
@@ -416,6 +424,7 @@ mod tests {
         cache.write(Message::text("bar"));
 
         let mut state = State {
+            conns_next_id: AtomicU32::new(1),
             conns: HashMap::new(),
             procs: HashMap::from([("room1".to_string(), senders)]),
             cfg: create_config("scalesocket --cache=all:64 --joinmsg=baz cat"),
@@ -441,6 +450,7 @@ mod tests {
     #[tokio::test]
     async fn test_disconnect() {
         let mut state = State {
+            conns_next_id: AtomicU32::new(1),
             conns: HashMap::from([
                 ("room1".to_string(), HashSet::from([1])),
                 ("room2".to_string(), HashSet::from([2])),
