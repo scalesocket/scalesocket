@@ -13,7 +13,7 @@ $ docker run --rm scalesocket/scalesocket:latest scalesocket --help
 
 ## Cargo (all platforms)
 
-If you have installed the Rust toolchain, you can also install using cargo (requires nightly):
+If you have installed the Rust toolchain, you can also install using cargo:
 
 ```shell
 cargo install --force scalesocket
@@ -26,5 +26,3 @@ Binary releases are available for linux via [GitHub](https://github.com/scalesoc
 ```shell
 $ VERSION=v0.2.2 curl -SL "https://github.com/scalesocket/scalesocket/releases/download/${VERSION}/scalesocket_${VERSION}_x86_64-unknown-linux-musl.tar.gz" | tar -xzC /usr/bin
 ```
-
-

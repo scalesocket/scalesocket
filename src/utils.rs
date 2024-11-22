@@ -54,6 +54,7 @@ pub fn exit_code<T>(status: Result<ExitStatus, T>) -> Option<i32> {
 pub mod warpext {
     use std::{collections::HashMap, convert::Infallible};
 
+    use futures::future::ready;
     use warp::{self, http::StatusCode, reject::Reject, Filter, Rejection, Reply};
 
     use crate::envvars::{CGIEnv, Env};
@@ -66,11 +67,11 @@ pub mod warpext {
 
     pub fn enable_if(condition: bool) -> impl Filter<Extract = (), Error = Rejection> + Copy {
         warp::any()
-            .and_then(async move || {
+            .and_then(move || {
                 if condition {
-                    Ok(())
+                   ready(Ok(()))
                 } else {
-                    Err(warp::reject::not_found())
+                   ready(Err(warp::reject::not_found()))
                 }
             })
             // deal with Ok(())
@@ -81,7 +82,7 @@ pub mod warpext {
         warp::any()
             .and(cgi_env())
             .and(warp::query::<HashMap<String, String>>())
-            .and_then(async move |cgi, query| Ok::<_, Rejection>((Env { cgi, query },)))
+            .and_then(move |cgi, query| ready(Ok::<_, Rejection>((Env { cgi, query },))))
             // deal with Ok(())
             .untuple_one()
     }
@@ -94,8 +95,8 @@ pub mod warpext {
         warp::any()
             .and(optional_query)
             .and(warp::addr::remote())
-            .and_then(async move |query, addr| {
-                Ok::<_, Rejection>((CGIEnv::from_filter(query, addr),))
+            .and_then(move |query, addr| {
+                ready(Ok::<_, Rejection>((CGIEnv::from_filter(query, addr),)))
             })
             // deal with Ok(())
             .untuple_one()
@@ -121,11 +122,11 @@ pub mod warpext {
             denylist: &'static [&'static str],
         ) -> impl Filter<Extract = One<T>, Error = Rejection> + Clone {
             warp::path::param::<T>()
-                .and_then(async move |param: T| {
+                .and_then(move |param: T| {
                     if denylist.contains(&param.deref()) {
-                        Err(warp::reject::custom(InvalidRoom))
+                        ready(Err(warp::reject::custom(InvalidRoom)))
                     } else {
-                        Ok::<_, Rejection>((param,))
+                        ready(Ok::<_, Rejection>((param,)))
                     }
                 })
                 // deal with Ok(())

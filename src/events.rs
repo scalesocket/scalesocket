@@ -150,9 +150,10 @@ fn attach(
         let env = env.clone();
 
         // Return callback for connection::handle
-        async move |_| {
+        move |_| {
             tracing::debug!(id = conn, "client disconnecting");
             let _ = tx.send(Event::Disconnect { room, conn, env });
+            futures::future::ready(())
         }
     };
 
