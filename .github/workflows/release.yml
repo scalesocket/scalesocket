@@ -41,7 +41,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2024-02-05
+          toolchain: stable
           target: ${{ matrix.target }}
 
       - uses: Swatinem/rust-cache@v2
