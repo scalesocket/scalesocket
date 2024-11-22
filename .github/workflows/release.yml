@@ -114,7 +114,7 @@ jobs:
         run: |
           mkdir -p "$ARCHIVE"
           cp "$BIN" "$ARCHIVE"/
-          tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+          tar czf "$ARCHIVE.tar.gz" --directory="$ARCHIVE" scalesocket
           shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
           echo "ASSET=$ARCHIVE.tar.gz" >> $GITHUB_ENV
           echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" >> $GITHUB_ENV
