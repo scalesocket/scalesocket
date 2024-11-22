@@ -199,6 +199,7 @@ impl RunningProcess {
 }
 
 #[cfg(test)]
+#[allow(unnameable_test_items)]
 mod tests {
 
     use clap::Parser;
