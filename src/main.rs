@@ -1,4 +1,3 @@
-#![feature(async_closure)]
 mod channel;
 mod cli;
 mod connection;
