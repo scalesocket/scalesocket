@@ -23,6 +23,13 @@ on:
   # Run on manual trigger
   workflow_dispatch:
 
+concurrency:
+  # Make sure every job on main have unique group id (run_id)
+  # Makes cancel-in-progress only affects PR's
+  # https://stackoverflow.com/questions/74117321/if-condition-in-concurrency-in-gha
+  group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: test
