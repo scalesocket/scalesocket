@@ -10,7 +10,12 @@
 
 ## About
 
-ScaleSocket is a command line tool that lets you to wrap a script or binary, and serve it collaboratively over websockets. Clients then connect to *rooms* (a.k.a. channels) which have a unique URL (`wss://example.com/exampleroom`). Connecting to a room spawns a new process of the wrapped binary. Subsequent connections to the same room share the process.
+ScaleSocket is a command line tool that lets you to wrap a backend script or binary, and serve it collaboratively over websockets.
+
+Clients connect to *rooms* (a.k.a. channels) which have a unique URL (`wss://example.com/room1`). Connecting to a room spawns a new backend process.
+Subsequent connections to the same room share the process.
+
+The backend does not require any network code or room handling logic.
 
 ## Documentation
 
@@ -62,7 +67,11 @@ $ curl --include \
 �{"message": "hello world"}�{"message": "goodbye"}%
 ```
 
-For more advanced usage and features, see [usage](https://www.scalesocket.org/man/usage.md).
+For more advanced usage and features, see [usage](https://www.scalesocket.org/man/usage).
+
+## Alternatives and Comparison
+
+See the [comparison](https://www.scalesocket.org/man/comparison).
 
 ## License
 

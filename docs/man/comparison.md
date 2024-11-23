@@ -6,11 +6,25 @@ hide_side_table_of_contents: true
 
 ## ScaleSocket vs. Websocketd
 
-ScaleSocket is inteded to be a drop-in replacement for [websocketd](http://websocketd.com/). It supports many of the same features, but allows websocket connections to share a single backend process.
+ScaleSocket is inteded to be a drop-in replacement for [websocketd](http://websocketd.com/).
+It supports many of the same features, but allows websocket connections to share a single backend process.
 
 ScaleSocket fully embraces the concept of rooms, and allows routing messages to specific clients.
 
 Additionally ScaleSocket exposes APIs for fetching room metadata, and metrics, which are useful for building lobbies and monitoring.
+
+## ScaleSocket vs Socket.io
+
+ScaleSocket can be used as a replacement for [Socket.io](https://socket.io/) in some cases.
+It supports some of the same features, such as rooms and message routing.
+
+The difference lies in how they are integrated with the backend code.
+Socket.io is a (frontend and) backend library that is used by the backend code.
+It requires the backend to handle connections and room logic.
+
+
+ScaleSocket is a command line tool, that is used to "wrap"the backend without touching the code.
+It is intended to somplify the backend so that it does not need to handle connections or room logic.
 
 ## Other Alternatives
 
