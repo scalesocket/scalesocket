@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.2
 ARG VERSION
 
-FROM alpine:3.20 as base
+FROM alpine:3.23 as base
 ARG VERSION
 RUN apk add --no-cache tini curl
 
