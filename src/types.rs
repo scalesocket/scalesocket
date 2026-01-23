@@ -1,6 +1,6 @@
 use {
     bytes::Bytes,
-    heapless::HistoryBuffer,
+    heapless::HistoryBuf,
     serde::Deserialize,
     std::io::Result as IOResult,
     tokio::sync::{broadcast, mpsc, oneshot},
@@ -155,23 +155,23 @@ impl From<&Config> for Caching {
     }
 }
 
-pub type BoxedHistoryBuffer<T, const N: usize> = Box<HistoryBuffer<T, N>>;
+pub type BoxedHistoryBuf<T, const N: usize> = Box<HistoryBuf<T, N>>;
 
 #[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum CacheBuffer {
-    Single(HistoryBuffer<Message, 1>),
-    Tiny(HistoryBuffer<Message, 8>),
-    Small(BoxedHistoryBuffer<Message, 64>),
+    Single(HistoryBuf<Message, 1>),
+    Tiny(HistoryBuf<Message, 8>),
+    Small(BoxedHistoryBuf<Message, 64>),
 }
 
 impl CacheBuffer {
     pub fn new(cache: &Cache) -> Self {
         use Cache::*;
         match cache {
-            All(1) | Tagged(1) => Self::Single(HistoryBuffer::<_, 1>::new()),
-            All(8) | Tagged(8) => Self::Tiny(HistoryBuffer::<_, 8>::new()),
-            All(64) | Tagged(64) => Self::Small(Box::new(HistoryBuffer::<_, 64>::new())),
+            All(1) | Tagged(1) => Self::Single(HistoryBuf::<_, 1>::new()),
+            All(8) | Tagged(8) => Self::Tiny(HistoryBuf::<_, 8>::new()),
+            All(64) | Tagged(64) => Self::Small(Box::new(HistoryBuf::<_, 64>::new())),
             _ => panic!("invalid cache size"),
         }
     }

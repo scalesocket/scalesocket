@@ -195,7 +195,7 @@ mod tests {
         registry.register(
             "example_metric",
             "Example description",
-            Family::<(), Counter>::default(),
+            Family::<Vec<(String, String)>, Counter>::default(),
         );
         let api = openmetrics(Some(registry), true);
 
