@@ -5,7 +5,7 @@
 
 *ScaleSocket* is a collaborative websocket server and autoscaler. It's a simple way to build multiplayer backends.
 
-![High level architecture diagram on ScaleSocket usage](https://github.com/scalesocket/scalesocket/blob/main/docs/_assets/diagram.svg?raw=true)
+![High level architecture diagram on ScaleSocket usage](https://github.com/scalesocket/scalesocket/blob/main/assets/diagram-usage.svg?raw=true)
 
 
 ## About
