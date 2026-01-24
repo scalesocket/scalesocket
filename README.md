@@ -2,24 +2,30 @@
 
 [![Build status](https://github.com/scalesocket/scalesocket/actions/workflows/ci.yml/badge.svg)](https://github.com/scalesocket/scalesocket/actions)
 [![Crates.io](https://img.shields.io/crates/v/scalesocket.svg)](https://crates.io/crates/scalesocket)
+[![Documentation](https://img.shields.io/badge/documentation%20-%20%23555)](https://www.scalesocket.org/docs/)
 
-*ScaleSocket* is a collaborative websocket server and autoscaler. It's a simple way to build multiplayer backends.
+Turn any code into a multiplayer websocket server.
 
 ![High level architecture diagram on ScaleSocket usage](https://github.com/scalesocket/scalesocket/blob/main/assets/diagram-usage.svg?raw=true)
 
 
 ## About
 
-ScaleSocket is a command line tool that lets you to wrap a backend script or binary, and serve it collaboratively over websockets.
+ScaleSocket is a command-line tool for serving a binary or a script over websockets.
+If you are a programmer and need to build a collaborative server, ScaleSocket might be the tool for you.
 
-Clients connect to *rooms* (a.k.a. channels) which have a unique URL (`wss://example.com/room1`). Connecting to a room spawns a new backend process.
-Subsequent connections to the same room share the process.
+To use it, you start your script using ScaleSocket and it maps the standard input and output streams to a websocket.
 
-The backend does not require any network code or room handling logic.
+Furthermore, it supports rooms.
+Multiple websocket connections to the same URL will be routed to the same process.
+It makes building multiplayer apps, collaborative editing, and games a breeze.
+
+Your script does not need to implement any network code or room handling logic.
+
 
 ## Documentation
 
-For full details and installation instructions, see the [documentation](https://www.scalesocket.org/man/).
+For full details and installation instructions, see the [documentation](https://www.scalesocket.org/docs/).
 
 
 ## Features
@@ -67,15 +73,18 @@ $ curl --include \
 �{"message": "hello world"}�{"message": "goodbye"}%
 ```
 
-For more advanced usage and features, see [usage](https://www.scalesocket.org/man/usage).
+For more advanced usage and features, see [usage](https://www.scalesocket.org/docs/usage).
+
 
 ## Alternatives and Comparison
 
-See the [comparison](https://www.scalesocket.org/man/comparison).
+See [comparison](https://www.scalesocket.org/docs/comparison).
+
 
 ## License
 
 * Apache License, Version 2.0 ([LICENSE](https://github.com/scalesocket/scalesocket/blob/HEAD/LICENSE) or [www.apache.org](http://www.apache.org/licenses/LICENSE-2.0))
+
 
 ## Contribution
 
