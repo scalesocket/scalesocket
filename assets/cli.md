@@ -1,7 +1,3 @@
----
-hide_side_table_of_contents: true
-title: "Command Line Arguments"
----
 # Command Line Arguments
 
 ```console
