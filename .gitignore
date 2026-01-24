@@ -1,8 +1,7 @@
-*
-!.gitignore
-!Cargo.*
-!README.md
-!LICENSE
-!docs/**/*.md
-!docs/README.md
-!src/**/*.rs
+/target
+
+.vscode/
+.idea/
+
+.DS_Store
+.tool-versions
