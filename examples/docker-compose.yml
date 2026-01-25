@@ -5,10 +5,9 @@ services:
     build:
       context: chat/
     ports:
-      - "5000:5000"
+      - "9000:9000"
     volumes:
       - ./chat/:/var/www/public
-      - ./chat/:/app/
 
   collaborative:
     build:
@@ -35,4 +34,4 @@ services:
       - ./terminal/:/var/www/public
       - ./terminal/:/app/
     ports:
-      - "5000:5000"
+      - "9000:9000"

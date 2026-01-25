@@ -1,59 +1,50 @@
 <!doctype html>
 <html>
-
 <head>
-    <title>Terminal Streaming Example using ScaleSocket</title>
+    <title>Terminal streaming example using ScaleSocket</title>
     <meta charset="utf-8" />
-    <script src="https://cdn.jsdelivr.net/npm/xterm@5.2.1/lib/xterm.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-attach@0.8.0/lib/xterm-addon-attach.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/xterm@5.2.1/css/xterm.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-attach@0.12.0/lib/addon-attach.min.js "></script>
+    <link href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" rel="stylesheet">
     <style>
-        body { background-color: #e2e8f0; font-family: Arial, Helvetica, sans-serif; text-align: center; }
-        #terminal { margin: 0 auto; max-width: 48rem; }
+        html, body { width: 100vw; overflow: hidden; }
     </style>
 </head>
-
 <body>
-    <div>
-        <h1>Terminal Streaming Example</h1>
-        <p><select
-                onchange="let value = this.options[this.selectedIndex].value || (Math.random() + 1).toString(36).substring(7); window.location.search = `?room=${value}`;">
-                <option disabled selected>Change Room</option>
-                <option value="default">Room 0 (default)</option>
-                <option value="room1">Room 1</option>
-                <option value="room2">Room 2</option>
-                <option value="room3">Room 3</option>
-                <option value="">Create new room</option>
-            </select></p>
-    </div>
+<header>
+    <p>
+        Rooms: <a href="?room=room1">room1</a>, <a href="?room=room2">room2</a>
+    </p>
+</header>
+
+<main>
     <div id="terminal"></div>
-    <p>"Multiplayer" terminal snake. Hit q to reset. Try opening
-        multiple instances. Built with <a href="https://www.scalesocket.org/man/examples/terminal"
-            target="_blank">ScaleSocket</a>. This demo is not mobile friendly.</p>
-    <script>
-        const $ = document.querySelector.bind(document);
-        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-        const params = new URLSearchParams(document.location.search);
-        const room = params.get("room") ?? 'default';
+    <p>
+        This example streams the <a href="https://en.wikipedia.org/wiki/Vim_(text_editor)">Vim</a>
+        command-line text editor to the browser.
+    </p>
+    <p>
+        Try writing <code>ihello world&lt;esc&gt;</code>.
+        Open multiple tabs to connect multiple times to the same room.
+    </p>
+</main>
 
-        // create a terminal
-        const term = new Terminal({ disableStdin: false });
-        const element = $('#terminal');
+<script>
+    const $ = id => document.getElementById(id);
+    const room = new URLSearchParams(location.search).get("room") || 'room1';
+    const protocol = location.protocol === "https:" ? "wss" : "ws"
+    const ws = new WebSocket(`${protocol}://${location.host}/${room}`);
 
-        // connect to websocket server and room based on URL
-        const ws = new WebSocket(`${protocol}:${window.location.host}/${room}`);
-        const attachAddon = new AttachAddon.AttachAddon(ws);
+    const term = new Terminal();
+    term.loadAddon(new AttachAddon.AttachAddon(ws));
+    term.open(document.getElementById('terminal'));
 
-        // attach the socket to term
-        term.loadAddon(attachAddon);
-        term.open(element);
-
-        ws.addEventListener("open", (event) => {
-           $('.xterm-helper-textarea').focus();
-           // some magic escape sequence to make input work for late-joiners
-           term.write('\x1b)0\x1b7\x1b[?47h\x1b[1;24r\x1b[m\x1b[4l\x1b[?1h\x1b=');
-        });
-    </script>
+    ws.onopen = () => {
+        term.focus();
+        // ask `vim` to redraw the screen
+        ws.send("\x1b:redraw!\n");
+    }
+</script>
 </body>
-
 </html>
