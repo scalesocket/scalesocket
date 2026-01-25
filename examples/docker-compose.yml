@@ -34,4 +34,4 @@ services:
       - ./terminal/:/var/www/public
       - ./terminal/:/app/
     ports:
-      - "5000:5000"
+      - "9000:9000"
