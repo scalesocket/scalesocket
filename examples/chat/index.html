@@ -1,87 +1,59 @@
 <!doctype html>
 <html>
-
 <head>
     <title>Chat Example using ScaleSocket</title>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body { background-color: #e2e8f0; font-family: Arial, Helvetica, sans-serif; margin: 0; text-align: center; }
-        #chat { margin: 0 auto; height: 50vh; display: flex; flex-direction: column; text-align: left; max-width: 48rem; }
-        #messages { background-color: #f1f5f9; overflow-x: scroll; padding: 1rem; }
-        #message { display: flex; flex-direction: row; }
-        .input-rounded { display: flex; border: 0; padding: 0.25rem; margin: 0.5rem; border-radius: 0.75rem; }
-        .grow { flex-grow: 1; }
-        .shrink { flex-shrink: 1; min-width: 0;  }
-    </style>
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css" />
 </head>
-
 <body>
-    <div>
-        <h1>Multiplayer Chat Example</h1>
-        <p><select
-                onchange="let value = this.options[this.selectedIndex].value || (Math.random() + 1).toString(36).substring(7); window.location.search = `?room=${value}`;">
-                <option disabled selected>Change Room</option>
-                <option value="default">Room 0 (default)</option>
-                <option value="room1">Room 1</option>
-                <option value="room2">Room 2</option>
-                <option value="room3">Room 3</option>
-                <option value="">Create new room</option>
-            </select></p>
-        <p>Multiplayer chat, try opening multiple instances. Built with <a
-                href="https://www.scalesocket.org/man/examples/chat" target="_blank">ScaleSocket</a>.</p>
-    </div>
-    <div id="chat">
-        <div id="messages" class="grow"></div>
-        <div id="message">
-            <input name="nick" placeholder="nick" class="input-rounded shrink" value="anonymous" />
-            <input name="message" placeholder="connecting..." class="input-rounded grow" disabled />
-        </div>
-    </div>
-    <script>
-        const $ = document.querySelector.bind(document);
-        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-        const params = new URLSearchParams(document.location.search);
-        const room = params.get("room") ?? 'default';
+<header>
+    <p>
+        Rooms: <a href="?room=room1">room1</a>, <a href="?room=room2">room2</a>
+    </p>
+</header>
 
-        // connect to websocket server and room based on URL
-        const ws = new WebSocket(`${protocol}:${window.location.host}/${room}`);
+<main>
+    <textarea id="messages" readonly rows="20"></textarea>
+    <input id="nick" placeholder="nickname" value="anonymous" />
+    <input id="message" placeholder="connecting..." disabled />
+</main>
 
-        const sendMessage = (text) => {
-            // send outgoing message
-            const nick = $("input[name=nick]").value || "anonymous";
-            ws.send(JSON.stringify({ nick, text }));
+<script>
+    const $ = id => document.getElementById(id);
+    const sanitize = str => str.replace(/[^a-zA-Z0-9 ]/g, '');
+    const room = new URLSearchParams(location.search).get("room") || 'room1';
+    const protocol = location.protocol === "https:" ? "wss" : "ws"
+    const ws = new WebSocket(`${protocol}://${location.host}/${room}`);
+
+    ws.onmessage = e => {
+        const msg = JSON.parse(e.data);
+        if (msg.t === "Join") {
+            $("messages").value += `a participant joined the chat\n`;
+        } else if (msg.t === "Leave") {
+            $("messages").value += `a participant left the chat\n`;
+        } else {
+            $("messages").value += `<${msg.nick}> ${msg.text}\n`;
         }
+        $("messages").scrollTop = $("messages").scrollHeight;
+    };
 
-        const recvMessage = (message) => {
-            // handle incoming message
-            const el = $("#messages")
-            el.appendChild(document.createTextNode(`<${message.nick}> ${message.text}`));
-            el.appendChild(document.createElement('br'));
-            el.scrollTop = el.scrollHeight;
-        }
+    ws.onopen = () => {
+        $("messages").value = `Connected to ${room}\n`;
+        $("message").placeholder = "type message...";
+        $("message").disabled = false;
+        $("message").focus();
+    };
 
-        // set websocket listener
-        ws.addEventListener('message', e => {
-            const message = JSON.parse(e.data);
-            recvMessage(message);
-        });
-        // set input listener
-        $("input[name=message]").addEventListener('keyup', ({ key, target }) => {
-            if (key === 'Enter') {
-                sendMessage(target.value);
-                target.value = "";
-                target.focus();
+    $("message").onkeyup = e => {
+        if (e.key === 'Enter' && e.target.value.trim()) {
+            const nick = sanitize($("nick").value) || "anonymous";
+            const text = sanitize(e.target.value);
+            if (text) {
+                ws.send(JSON.stringify({ nick, text }));
+                e.target.value = "";
             }
-        });
-
-        ws.addEventListener('open', _ => {
-            // set input focus
-            $("input[name=message]").placeholder = "message...";
-            $("input[name=message]").disabled = false;
-            $("input[name=message]").focus();
-        });
-    </script>
+        }
+    };
+</script>
 </body>
-
 </html>
