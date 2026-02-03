@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.2
 FROM scalesocket/scalesocket:latest
 RUN apk add --no-cache\
     --repository http://dl-cdn.alpinelinux.org/alpine/edge/main\

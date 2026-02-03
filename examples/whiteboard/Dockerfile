@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.2
 FROM node:25-alpine
 
 COPY --from=scalesocket/scalesocket:latest /usr/bin /usr/bin
