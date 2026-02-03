@@ -35,3 +35,12 @@ services:
       - ./terminal/:/app/
     ports:
       - "9000:9000"
+
+  whiteboard:
+    build:
+      context: whiteboard/
+    volumes:
+      - ./whiteboard/:/var/www/public
+      - ./whiteboard/:/app/
+    ports:
+      - "9000:9000"
