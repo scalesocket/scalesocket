@@ -1,0 +1,18 @@
+{
+    "compileOnSave": false,
+    "compilerOptions": {
+        "noEmit": true,
+        "allowJs": true,
+        "checkJs": true,
+        "target": "es6",
+        "moduleResolution": "node",
+        "paths": {
+          /**
+           * In order to enable types, download the declaration:
+           * https://unpkg.com/pixi.js@8.5.2/dist/pixi.js.d.ts
+           */
+          "pixi.js": ["./pixi.js.d.ts"]
+        },
+        "lib": ["DOM", "ESNext"]
+    }
+}

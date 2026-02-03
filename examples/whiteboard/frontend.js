@@ -1,8 +1,3 @@
-
-/**
- * An example Whiteboard frontend using WebSockets.
- */
-
 import * as PIXI from "pixi.js";
 
  /** @typedef {(PIXI.Sprite & { targetPosition?: PIXI.Point })} Item */
