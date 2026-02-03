@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+    <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Whiteboard Example using ScaleSocket</title>
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css" />
+    <style>
+        #pixi-container {
+            max-width: 100%;
+            min-width: 360px;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "pixi.js": "https://unpkg.com/pixi.js@8.5.2/dist/pixi.min.mjs",
+                "pixi-viewport": "https://unpkg.com/pixi-viewport@6.0.3/dist/pixi_viewport.js",
+                "frontend": "./frontend.js"
+            }
+        }
+    </script>
+</head>
+<body>
+<header>
+    <p>
+        Rooms: <a href="?room=room1">room1</a>, <a href="?room=room2">room2</a>
+    </p>
+</header>
+
+<main>
+    <div id="pixi-container"></div>
+    <p>
+        Example whiteboard.
+        Pan and move items using the mouse.
+    </p>
+    <p>
+        Open multiple tabs to connect multiple times to the same room.
+    </p>
+</main>
+<script type="module">
+    import { Application, Text, Graphics } from "pixi.js";
+    import { Viewport } from "pixi-viewport";
+    import { Whiteboard } from "frontend";
+
+    const room = new URLSearchParams(location.search).get("room") || 'room1';
+    const protocol = location.protocol === "https:" ? "wss" : "ws"
+    const ws = new WebSocket(`${protocol}://${location.host}/${room}`);
+
+    const { app, viewport } = await setup('pixi-container');
+    const whiteboard = new Whiteboard(ws, viewport);
+
+    console.log(`Opened whiteboard in "${room}"`);
+
+    async function setup(id) {
+      const container = document.getElementById(id);
+        // Create App
+        const app = await createApp(container)
+        container.appendChild(app.canvas);
+
+        const viewport = createViewport(app, container)
+        app.stage.addChild(viewport);
+
+        // Create help text
+        let text = new Text('Use mouse to pan and move objects');
+        text.x = text.y = 175;
+        app.stage.addChild(text);
+        viewport.on('pointerenter', () => {
+          app.stage.removeChild(text);
+        })
+
+        return { app, viewport };
+    }
+
+    async function createApp(container) {
+      const { width, height } = container.getBoundingClientRect();
+      const app = new Application({ sharedTicker: true });
+      await app.init({ width, height, backgroundColor: 0xfafafa });
+      return app
+    }
+
+    function createViewport(app, container) {
+      const { width, height } = container.getBoundingClientRect();
+      const viewport = new Viewport({
+          screenWidth: width,
+          screenHeight: height,
+          worldWidth: 1000,
+          worldHeight: 1000,
+          events: app.renderer.events,
+      });
+      viewport.drag().pinch().wheel().decelerate();
+      viewport.fit();
+      viewport.moveCenter(viewport.worldWidth / 2, viewport.worldHeight/ 2);
+
+      // Setup Viewport
+      const border = new Graphics()
+        .rect(0, 0, viewport.worldWidth , viewport.worldHeight)
+        .stroke({ width: 8, color: 'gray' });
+      viewport.addChild(border);
+      return viewport
+    }
+</script>
+</body>
+</html>
