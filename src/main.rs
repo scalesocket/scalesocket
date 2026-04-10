@@ -65,7 +65,7 @@ mod tests {
 
     impl Client {
         pub async fn connect(path: &'static str, tx: EventTx) -> Self {
-            let api = routes::socket(tx);
+            let api = routes::socket(tx, None);
             let client = warp::test::ws()
                 .path(path)
                 .handshake(api)

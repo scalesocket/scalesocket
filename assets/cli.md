@@ -73,6 +73,11 @@ Options:
           
           [default: PATH,DYLD_LIBRARY_PATH]
 
+      --rooms <LIST>
+          List of valid rooms
+          
+          When set, websocket connections are only accepted on the specified paths `/<ROOM>`.
+
       --frame[=<MODE>...]
           Enable framing and routing for all messages
           

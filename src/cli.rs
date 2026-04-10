@@ -122,6 +122,17 @@ pub struct Config {
     )]
     pub passenv: Vec<String>,
 
+    /// List of valid rooms
+    ///
+    /// When set, websocket connections are only accepted on the specified paths `/<ROOM>`.
+    #[clap(
+        long,
+        value_name = "LIST",
+        value_delimiter = ',',
+        conflicts_with = "tcpports"
+    )]
+    pub rooms: Option<Vec<String>>,
+
     /// Enable framing and routing for all messages
     ///
     /// Client messages are tagged with an ID header (u32). Server messages with optional client ID are routed to clients.

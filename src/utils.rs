@@ -103,19 +103,27 @@ pub mod warpext {
 
     pub mod path {
 
-        use std::{ops::Deref, str::FromStr};
+        use std::{collections::HashSet, ops::Deref, str::FromStr};
 
         use super::*;
-        pub fn param_not<T: FromStr + Send + Deref<Target = str> + 'static>(
-            denylist: &'static [&'static str],
+        pub fn param_matches<T: FromStr + Send + Deref<Target = str> + 'static>(
+            denylist: Option<&'static [&'static str]>,
+            allowlist: Option<Vec<String>>,
         ) -> impl Filter<Extract = One<T>, Error = Rejection> + Clone {
+            let allowlist = allowlist.map(HashSet::<String>::from_iter);
             warp::path::param::<T>()
                 .and_then(move |param: T| {
-                    if denylist.contains(&param.deref()) {
-                        ready(Err(warp::reject::custom(InvalidRoom)))
-                    } else {
-                        ready(Ok::<_, Rejection>((param,)))
+                    if let Some(denylist) = denylist {
+                        if denylist.contains(&param.deref()) {
+                            return ready(Err(warp::reject::custom(InvalidRoom)))
+                        }
                     }
+                    if let Some(ref allowlist) = allowlist {
+                        if !allowlist.contains(param.deref()) {
+                            return ready(Err(warp::reject::custom(InvalidRoom)))
+                        }
+                    }
+                    ready(Ok::<_, Rejection>((param,)))
                 })
                 // deal with Ok(())
                 .untuple_one()
