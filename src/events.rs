@@ -42,6 +42,7 @@ pub async fn handle(
     metrics: Metrics,
 ) -> Result<(), ()> {
     let is_oneshot = config.oneshot;
+    let max_procs = config.max_rooms.unwrap_or(usize::MAX);
     let mut state = State::new(config);
 
     while let Some(event) = rx.recv().await {
@@ -57,6 +58,12 @@ pub async fn handle(
                 attach(room, env, ws, &tx, &mut state, None);
             }
             Event::Connect { room, ws, env } => {
+                if state.procs.len() >= max_procs {
+                    tracing::warn!("client rejected, maximum number of rooms reached");
+                    let _ = ws.close().await;
+                    continue;
+                }
+
                 metrics.inc_ws_connections(&room);
                 let spawn_barrier = Some(Arc::new(Barrier::new(2)));
                 let attach_barrier = spawn_barrier.clone();

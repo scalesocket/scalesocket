@@ -78,6 +78,11 @@ Options:
           
           When set, websocket connections are only accepted on the specified paths `/<ROOM>`.
 
+      --maxrooms <NUM>
+          Maximum number of rooms
+          
+          When set, websocket connections are accepted on up to <NUM> rooms. Since a child process is spawned for each room, this is equivalent to limiting the maximum number of processes.
+
       --frame[=<MODE>...]
           Enable framing and routing for all messages
           

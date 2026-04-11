@@ -133,6 +133,19 @@ pub struct Config {
     )]
     pub rooms: Option<Vec<String>>,
 
+    /// Maximum number of rooms
+    ///
+    /// When set, websocket connections are accepted on up to <NUM> rooms.
+    /// Since a child process is spawned for each room, this is equivalent to limiting the maximum number of processes.
+    #[clap(
+        long = "maxrooms",
+        alias = "maxforks",
+        value_name = "NUM",
+        default_value_if("oneshot", ArgPredicate::Equals("true".into()), Some("1")),
+        conflicts_with = "tcpports"
+    )]
+    pub max_rooms: Option<usize>,
+
     /// Enable framing and routing for all messages
     ///
     /// Client messages are tagged with an ID header (u32). Server messages with optional client ID are routed to clients.
