@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  # Make sure every job on main have unique group id (run_id)
+  # Make sure every job on main has unique group id (run_id)
   # Makes cancel-in-progress only affects PR's
   # https://stackoverflow.com/questions/74117321/if-condition-in-concurrency-in-gha
   group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
@@ -73,3 +73,13 @@ jobs:
 
       - name: Check formatting
         run: cargo fmt --all -- --check
+
+  docker:
+    name: docker build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Check build
+        run: docker build --check .
