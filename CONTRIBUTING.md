@@ -7,7 +7,7 @@ Please use the following guidelines when contributing to `scalesocket`:
 - Format PR title as: `TYPE: DESCRIPTION`:
   - The types `Feature,Fix,Docs,Style,Refactor,Perf,Tests,Chore,Examples` are used.
 - Run the tests (`cargo test`)
-- Run the linters and formatters (`cargo fmt`) (requires a nightly compiler)
+- Run the linters and formatters (`cargo fmt`) and clippy (`cargo clippy`). Requires a nightly compiler.
 
 ## Architecture
 
