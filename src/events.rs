@@ -46,10 +46,13 @@ pub async fn handle(
 
     while let Some(event) = rx.recv().await {
         match event {
-            Event::Connect { room, ws, .. } if state.procs.contains_key(&room) && is_oneshot => {
-                let _ = ws.close().await;
-            }
             Event::Connect { room, ws, env } if state.procs.contains_key(&room) => {
+                if is_oneshot {
+                    tracing::warn!("client rejected, no connections permitted in oneshot mode");
+                    let _ = ws.close().await;
+                    continue;
+                }
+
                 metrics.inc_ws_connections(&room);
                 attach(room, env, ws, &tx, &mut state, None);
             }
