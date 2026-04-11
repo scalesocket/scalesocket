@@ -62,11 +62,11 @@ pub struct Config {
 
     /// Emit message to child on client connect (use #ID for id)
     #[clap(
-        long,
+        long = "joinmsg",
         value_name = "MSG",
         default_value_if("json",  ArgPredicate::Equals("true".into()), Some(r#"{"t":"Join","_from":#ID}"#))
     )]
-    pub joinmsg: Option<String>,
+    pub join_msg: Option<String>,
 
     /// Enable JSON framing with default join and leave messages
     ///
@@ -83,11 +83,11 @@ pub struct Config {
 
     /// Emit message to child on client disconnect (use #ID for id)
     #[clap(
-        long,
+        long = "leavemsg",
         value_name = "MSG",
         default_value_if("json",  ArgPredicate::Equals("true".into()), Some(r#"{"t":"Leave","_from":#ID}"#))
     )]
-    pub leavemsg: Option<String>,
+    pub leave_msg: Option<String>,
 
     /// Log format
     ///
@@ -139,7 +139,7 @@ pub struct Config {
         alias = "maxforks",
         value_name = "NUM",
         default_value_if("oneshot", ArgPredicate::Equals("true".into()), Some("1")),
-        conflicts_with = "tcpports"
+        conflicts_with = "tcp_ports"
     )]
     pub max_rooms: Option<usize>,
 
@@ -198,8 +198,8 @@ pub struct Config {
     pub server_frame: Option<Frame>,
 
     /// Serve static files from directory over HTTP
-    #[clap(long, value_parser, value_name = "DIR")]
-    pub staticdir: Option<PathBuf>,
+    #[clap(long = "staticdir", value_parser, value_name = "DIR")]
+    pub static_dir: Option<PathBuf>,
 
     /// Expose room metadata API under /api/
     ///
@@ -217,13 +217,14 @@ pub struct Config {
     /// Port range for TCP
     ///
     /// [default: 9001:9999 with --tcp]
-    #[clap(long,
+    #[clap(
+        long = "tcpports",
         value_parser = parse_ports,
         value_name = "START:END",
         requires = "tcp",
         default_value_if("tcp",  ArgPredicate::Equals("true".into()), Some("9001:9999"))
     )]
-    pub tcpports: Option<Range<u16>>,
+    pub tcp_ports: Option<Range<u16>>,
 
     /// Increase level of verbosity
     #[clap(short, action = ArgAction::Count)]

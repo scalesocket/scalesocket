@@ -108,7 +108,7 @@ impl State {
             conns_next_id: AtomicU32::new(1),
             conns: HashMap::new(),
             procs: HashMap::new(),
-            ports: cfg.tcpports.clone().map(PortPool::new_ranged),
+            ports: cfg.tcp_ports.clone().map(PortPool::new_ranged),
             cache: HashMap::new(),
             cfg,
         }
@@ -153,7 +153,7 @@ fn attach(
             tracing::info!(id = conn, "client connected");
 
             // Inform child
-            if let Some(ref join_msg_template) = state.cfg.joinmsg {
+            if let Some(ref join_msg_template) = state.cfg.join_msg {
                 let join_msg = replace_template_env(join_msg_template, conn, &env);
                 let _ = proc_tx.send(Message::text(join_msg));
             }
@@ -265,7 +265,7 @@ fn disconnect(room: RoomID, env: Env, conn: ConnID, state: &mut State) {
         tracing::info!(id = conn, "client disconnected");
 
         // Inform child
-        if let Some(ref leave_msg_template) = state.cfg.leavemsg {
+        if let Some(ref leave_msg_template) = state.cfg.leave_msg {
             let leave_msg = replace_template_env(leave_msg_template, conn, &env);
             let _ = proc_tx.send(Message::text(leave_msg));
         }
