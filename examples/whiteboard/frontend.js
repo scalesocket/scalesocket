@@ -97,6 +97,7 @@ export class Whiteboard {
       this.sendMessage({ t: 'Move', key, position: { x, y } })
       this.selectedKey = null;
       this.items[key].cursor = 'grab';
+      // @ts-ignore
       this.viewport.drag({ pressDrag: true });
     }
   }
@@ -106,7 +107,7 @@ export class Whiteboard {
    * @param {PIXI.Point} position
    */
   async addItem(key, position) {
-    const texture = await PIXI.Assets.load(`${key}.png`);
+    const texture = await PIXI.Assets.load(`images/${key}.png`);
     /** @type {Item} */
     const item = new PIXI.Sprite(texture);
 
@@ -120,6 +121,7 @@ export class Whiteboard {
     item.on('pointerdown', () => {
       this.selectedKey = key;
       item.cursor = 'grabbing';
+      // @ts-ignore
       this.viewport.drag({ pressDrag: false})
     })
 
