@@ -24,10 +24,9 @@ pub struct Config {
 
     /// Cache server message history for room and replay it to new clients
     ///
-    /// The cache buffer retains the last <SIZE> chunks, determined by <TYPE>.
-    ///
-    /// When set to `all`, all server messages are cached.
-    /// When set to `tagged`, only server messages with `_cache: true` are cached.
+    /// The cache buffer retains the last <SIZE> chunks, determined by <TYPE>:
+    /// When <TYPE> is `all`, all server messages are cached.
+    /// When <TYPE> is `tagged`, only server messages with `_cache: true` are cached.
     #[clap(long, value_parser = parse_cache, value_name = "[TYPE:]SIZE", verbatim_doc_comment)]
     pub cache: Option<Cache>,
 
@@ -51,7 +50,6 @@ pub struct Config {
     #[clap(
         long,
         value_parser,
-        value_name = "DELIMITERS",
         default_value = "\n",
         default_value_if("binary", ArgPredicate::Equals("true".into()), Some("")),
         default_value_if("null", ArgPredicate::Equals("true".into()), Some("")),
@@ -111,7 +109,7 @@ pub struct Config {
     #[clap(long, action)]
     pub null: bool,
 
-    /// Serve only once.
+    /// Serve only once
     #[clap(long)]
     pub oneshot: bool,
 
