@@ -34,7 +34,9 @@ Options:
           Preserve server message history for room even after last client disconnects
 
       --delay <SECONDS>
-          Delay before attaching to child [default: 1 for --tcp]
+          Delay before attaching to child
+          
+          [default: 1 with --tcp]
 
       --delimiters=<DELIMITERS>
           Process output items are terminated by given characters
@@ -96,7 +98,7 @@ Options:
           
           See --serverframe and --clientframe for specifying framing independently.
           
-          [default: json when set, possible values: gwsocket, json]
+          [default: json with --json, possible values: gwsocket, json]
 
       --clientframe=<MODE>
           Enable framing and routing for client originated messages

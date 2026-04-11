@@ -35,7 +35,9 @@ pub struct Config {
     /// Preserve server message history for room even after last client disconnects
     pub cache_persist: bool,
 
-    /// Delay before attaching to child [default: 1 for --tcp]
+    /// Delay before attaching to child
+    ///
+    /// [default: 1 with --tcp]
     #[clap(
         long = "delay",
         value_name = "SECONDS",
@@ -156,7 +158,7 @@ pub struct Config {
     ///
     /// See --serverframe and --clientframe for specifying framing independently.
     ///
-    /// [default: json when set, possible values: gwsocket, json]
+    /// [default: json with --json, possible values: gwsocket, json]
     #[clap(
         long,
         value_parser,
