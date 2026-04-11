@@ -2,7 +2,7 @@ use {
     bytes::Bytes,
     futures::TryStreamExt,
     futures::{FutureExt, StreamExt},
-    std::io::{Error as IOError, ErrorKind as IOErrorKind, Result as IOResult},
+    std::io::{Error as IOError, Result as IOResult},
     std::sync::Arc,
     tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     tokio::net::TcpStream,
@@ -108,11 +108,7 @@ async fn spawn(channel: &mut Channel) -> AppResult<RunningProcess> {
                             buffer,
                             AnyDelimiterCodec::new(delimiters.clone(), delimiters),
                         );
-                        Box::new(
-                            stream
-                                .map_ok(Bytes::from)
-                                .map_err(|e| IOError::new(IOErrorKind::Other, e)),
-                        )
+                        Box::new(stream.map_ok(Bytes::from).map_err(IOError::other))
                     }
                 };
 
@@ -162,7 +158,7 @@ async fn spawn(channel: &mut Channel) -> AppResult<RunningProcess> {
                         let delimiters = channel.delimiters.clone().into_bytes();
                         let codec = AnyDelimiterCodec::new(delimiters, vec![]);
                         let stream = FramedRead::new(buffer, codec);
-                        Box::new(stream.map_err(|e| IOError::new(IOErrorKind::Other, e)))
+                        Box::new(stream.map_err(IOError::other))
                     }
                 };
 

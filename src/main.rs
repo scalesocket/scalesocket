@@ -114,7 +114,7 @@ mod tests {
             _ => None,
         };
 
-        assert_eq!(Some("example".to_string()), room);
+        assert_eq!(Some("example"), room.as_deref());
     }
 
     #[tokio::test]
