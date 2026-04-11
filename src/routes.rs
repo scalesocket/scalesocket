@@ -42,7 +42,7 @@ pub fn handle(
             .or(openmetrics(registry, config.metrics))
             .or(rooms_api(metrics.clone(), config.api))
             .or(metadata_api(metrics, config.api))
-            .or(files(config.staticdir.clone()))
+            .or(files(config.static_dir))
             .recover(handle_rejection),
     )
     .bind_with_graceful_shutdown(config.addr, shutdown_rx)

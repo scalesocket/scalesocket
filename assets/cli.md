@@ -25,10 +25,9 @@ Options:
       --cache <[TYPE:]SIZE>
           Cache server message history for room and replay it to new clients
           
-          The cache buffer retains the last <SIZE> chunks, determined by <TYPE>.
-          
-          When set to `all`, all server messages are cached.
-          When set to `tagged`, only server messages with `_cache: true` are cached.
+          The cache buffer retains the last <SIZE> chunks, determined by <TYPE>:
+          When <TYPE> is `all`, all server messages are cached.
+          When <TYPE> is `tagged`, only server messages with `_cache: true` are cached.
 
       --cachepersist
           Preserve server message history for room even after last client disconnects

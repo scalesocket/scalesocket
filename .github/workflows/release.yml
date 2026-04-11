@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/release.yml"
+      - "Dockerfile"
   # Run on release
   release:
     types: [created]
@@ -20,7 +21,7 @@ concurrency:
 
 jobs:
   release-github:
-    name: Build and Release ${{ matrix.target }} on ${{ matrix.os}}
+    name: Build and Release ${{ matrix.target }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -46,7 +47,7 @@ jobs:
       - name: Extract tag
         id: meta
         run: |
-          if [[ "${GITHUB_REF#refs/*/}" == *merge ]]; then
+          if [[ "${GITHUB_REF#refs/*/}" == *merge || "${{ github.event_name }}" != "release" ]]; then
             echo "tag=test" >> $GITHUB_OUTPUT
           else
             echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
@@ -144,7 +145,7 @@ jobs:
       - name: Extract tag
         id: meta
         run: |
-          if [[ "${GITHUB_REF#refs/*/}" == *merge ]]; then
+          if [[ "${GITHUB_REF#refs/*/}" == *merge || "${{ github.event_name }}" != "release" ]]; then
             echo "tag=test" >> $GITHUB_OUTPUT
           else
             echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT

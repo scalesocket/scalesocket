@@ -8,7 +8,8 @@ const state = {
   'floppies': { x: 225, y: 520 },
 }
 
-const send = (data: Object) => {
+const send = (data: object) => {
+  // Messages logged to stdout are sent to the client via the websocket
   console.log(JSON.stringify(data))
 }
 

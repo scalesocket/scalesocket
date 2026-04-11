@@ -36,7 +36,7 @@ async fn main() {
     let mut registry = config.metrics.then_some(<Registry>::default());
     let mtr = Metrics::new(&mut registry, config.api);
 
-    tracing::info!("listening at {}", config.addr);
+    tracing::info!("listening on {}", config.addr);
 
     let handle_events = events::handle(tx.clone(), rx, config.clone(), mtr.clone());
     let handle_routes = routes::handle(tx, config, routes_shutdown_rx, mtr, registry).unit_error();
@@ -114,7 +114,7 @@ mod tests {
             _ => None,
         };
 
-        assert_eq!(Some("example".to_string()), room);
+        assert_eq!(Some("example"), room.as_deref());
     }
 
     #[tokio::test]
