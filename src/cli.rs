@@ -125,12 +125,7 @@ pub struct Config {
     /// List of valid rooms
     ///
     /// When set, websocket connections are only accepted on the specified paths `/<ROOM>`.
-    #[clap(
-        long,
-        value_name = "LIST",
-        value_delimiter = ',',
-        conflicts_with = "tcpports"
-    )]
+    #[clap(long, value_name = "LIST", value_delimiter = ',')]
     pub rooms: Option<Vec<String>>,
 
     /// Maximum number of rooms
@@ -218,8 +213,15 @@ pub struct Config {
     pub tcp: bool,
 
     /// Port range for TCP
-    #[clap(long, value_parser = parse_ports, value_name = "START:END", default_value = "9001:9999")]
-    pub tcpports: Range<u16>,
+    ///
+    /// [default: 9001:9999 with --tcp]
+    #[clap(long,
+        value_parser = parse_ports,
+        value_name = "START:END",
+        requires = "tcp",
+        default_value_if("tcp",  ArgPredicate::Equals("true".into()), Some("9001:9999"))
+    )]
+    pub tcpports: Option<Range<u16>>,
 
     /// Increase level of verbosity
     #[clap(short, action = ArgAction::Count)]

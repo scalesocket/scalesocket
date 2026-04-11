@@ -30,7 +30,7 @@ struct State {
     pub conns: ConnectionMap,
     pub cache: ProcessCacheMap,
     pub procs: ProcessMap,
-    pub ports: PortPool,
+    pub ports: Option<PortPool>,
     pub cfg: Config,
 }
 
@@ -108,7 +108,7 @@ impl State {
             conns_next_id: AtomicU32::new(1),
             conns: HashMap::new(),
             procs: HashMap::new(),
-            ports: PortPool::new_ranged(cfg.tcpports.clone()),
+            ports: cfg.tcpports.clone().map(PortPool::new_ranged),
             cache: HashMap::new(),
             cfg,
         }
@@ -193,7 +193,7 @@ fn spawn(
     state: &mut State,
     barrier: Option<Arc<Barrier>>,
 ) -> AppResult<()> {
-    let port = state.ports.request_id();
+    let port = state.ports.as_mut().and_then(|p| p.request_id());
 
     if let Some(port) = port {
         tracing::debug!("reserved port {}", port);
@@ -284,7 +284,7 @@ fn disconnect(room: RoomID, env: Env, conn: ConnID, state: &mut State) {
 #[instrument(name = "exit", skip(code, port, state))]
 fn exit(room: RoomID, code: Option<i32>, port: Option<PortID>, state: &mut State) {
     if let Some(port) = port {
-        let _ = state.ports.return_id(port);
+        let _ = state.ports.as_mut().map(|p| p.return_id(port));
         tracing::debug!("released port {}", port);
     }
 
@@ -324,7 +324,7 @@ mod tests {
     };
     use warp::{filters::ws::Message, Filter};
 
-    use super::{attach, disconnect, Env, Event, PortPool, State};
+    use super::{attach, disconnect, Env, Event, State};
     use crate::{
         cli::Config,
         types::{Cache, CacheBuffer, ProcessSenders, ToProcessRx},
@@ -380,7 +380,7 @@ mod tests {
             conns: HashMap::new(),
             procs: HashMap::from([("room1".to_string(), senders)]),
             cfg: create_config("scalesocket cat --joinmsg=foo"),
-            ports: PortPool::new(),
+            ports: None,
             cache: HashMap::new(),
         };
         let (tx, _) = sync::mpsc::unbounded_channel::<Event>();
@@ -406,7 +406,7 @@ mod tests {
             conns: HashMap::new(),
             procs: HashMap::from([("room1".to_string(), senders)]),
             cfg: create_config("scalesocket cat --joinmsg=foo"),
-            ports: PortPool::new(),
+            ports: None,
             cache: HashMap::new(),
         };
         let (tx, _) = sync::mpsc::unbounded_channel::<Event>();
@@ -438,7 +438,7 @@ mod tests {
             conns: HashMap::new(),
             procs: HashMap::from([("room1".to_string(), senders)]),
             cfg: create_config("scalesocket --cache=all:64 --joinmsg=baz cat"),
-            ports: PortPool::new(),
+            ports: None,
             cache: HashMap::from([("room1".to_string(), Arc::new(Mutex::new(cache)))]),
         };
         let (tx, _) = sync::mpsc::unbounded_channel::<Event>();
@@ -467,7 +467,7 @@ mod tests {
             ]),
             procs: HashMap::from([("room1".to_string(), create_process_senders())]),
             cfg: create_config("scalesocket cat"),
-            ports: PortPool::new(),
+            ports: None,
             cache: HashMap::new(),
         };
 

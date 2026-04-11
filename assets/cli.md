@@ -125,7 +125,7 @@ Options:
       --tcpports <START:END>
           Port range for TCP
           
-          [default: 9001:9999]
+          [default: 9001:9999 with --tcp]
 
   -v...
           Increase level of verbosity
