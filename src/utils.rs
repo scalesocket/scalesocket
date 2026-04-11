@@ -92,7 +92,7 @@ pub mod warpext {
 
     pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
         use warp::reply::with_status as status;
-        if err.is_not_found() {
+        if err.is_not_found() || err.find::<warp::ws::MissingConnectionUpgrade>().is_some() {
             Ok(status("Not found", StatusCode::NOT_FOUND))
         } else if err.find::<InvalidRoom>().is_some() {
             Ok(status("Invalid room", StatusCode::BAD_REQUEST))

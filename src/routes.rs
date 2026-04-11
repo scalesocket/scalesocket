@@ -155,17 +155,24 @@ mod tests {
     use prometheus_client::metrics::family::Family;
     use serde_json::{self, Value};
     use warp::http::StatusCode;
-    use warp::test::request;
+    use warp::test::{request, RequestBuilder};
 
     use super::*;
 
-    fn ws_request(path: &'static str) -> warp::test::RequestBuilder {
+    fn ws_request(path: &'static str) -> RequestBuilder {
         request()
             .method("GET")
             .header("Connection", "Upgrade")
             .header("Upgrade", "websocket")
             .header("Sec-WebSocket-Key", "SGVsbG8sIHdvcmxkIQ==")
             .header("Sec-WebSocket-Version", 13)
+            .path(path)
+    }
+
+    fn browser_request(path: &'static str) -> RequestBuilder {
+        request()
+            .method("GET")
+            .header("Connection", "keep-alive")
             .path(path)
     }
 
@@ -191,6 +198,18 @@ mod tests {
         assert_eq!(ws("/api/rooms").await.status(), StatusCode::BAD_REQUEST);
         assert_eq!(ws("/metrics").await.status(), StatusCode::BAD_REQUEST);
         assert_eq!(ws("/health").await.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn socket_detects_browser_request() {
+        let (tx, _) = tokio::sync::mpsc::unbounded_channel::<Event>();
+        let api = socket(tx, None).recover(handle_rejection);
+
+        let resp = browser_request("/room").reply(&api).await;
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        let resp = ws_request("/room").reply(&api).await;
+        assert_eq!(resp.status(), StatusCode::SWITCHING_PROTOCOLS);
     }
 
     #[tokio::test]
