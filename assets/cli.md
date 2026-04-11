@@ -34,7 +34,9 @@ Options:
           Preserve server message history for room even after last client disconnects
 
       --delay <SECONDS>
-          Delay before attaching to child [default: 1 for --tcp]
+          Delay before attaching to child
+          
+          [default: 1 with --tcp]
 
       --delimiters=<DELIMITERS>
           Process output items are terminated by given characters
@@ -73,6 +75,16 @@ Options:
           
           [default: PATH,DYLD_LIBRARY_PATH]
 
+      --rooms <LIST>
+          List of valid rooms
+          
+          When set, websocket connections are only accepted on the specified paths `/<ROOM>`.
+
+      --maxrooms <NUM>
+          Maximum number of rooms
+          
+          When set, websocket connections are accepted on up to <NUM> rooms. Since a child process is spawned for each room, this is equivalent to limiting the maximum number of processes.
+
       --frame[=<MODE>...]
           Enable framing and routing for all messages
           
@@ -86,7 +98,7 @@ Options:
           
           See --serverframe and --clientframe for specifying framing independently.
           
-          [default: json when set, possible values: gwsocket, json]
+          [default: json with --json, possible values: gwsocket, json]
 
       --clientframe=<MODE>
           Enable framing and routing for client originated messages
@@ -115,7 +127,7 @@ Options:
       --tcpports <START:END>
           Port range for TCP
           
-          [default: 9001:9999]
+          [default: 9001:9999 with --tcp]
 
   -v...
           Increase level of verbosity

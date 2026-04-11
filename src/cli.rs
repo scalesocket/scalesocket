@@ -35,7 +35,9 @@ pub struct Config {
     /// Preserve server message history for room even after last client disconnects
     pub cache_persist: bool,
 
-    /// Delay before attaching to child [default: 1 for --tcp]
+    /// Delay before attaching to child
+    ///
+    /// [default: 1 with --tcp]
     #[clap(
         long = "delay",
         value_name = "SECONDS",
@@ -122,6 +124,25 @@ pub struct Config {
     )]
     pub passenv: Vec<String>,
 
+    /// List of valid rooms
+    ///
+    /// When set, websocket connections are only accepted on the specified paths `/<ROOM>`.
+    #[clap(long, value_name = "LIST", value_delimiter = ',')]
+    pub rooms: Option<Vec<String>>,
+
+    /// Maximum number of rooms
+    ///
+    /// When set, websocket connections are accepted on up to <NUM> rooms.
+    /// Since a child process is spawned for each room, this is equivalent to limiting the maximum number of processes.
+    #[clap(
+        long = "maxrooms",
+        alias = "maxforks",
+        value_name = "NUM",
+        default_value_if("oneshot", ArgPredicate::Equals("true".into()), Some("1")),
+        conflicts_with = "tcpports"
+    )]
+    pub max_rooms: Option<usize>,
+
     /// Enable framing and routing for all messages
     ///
     /// Client messages are tagged with an ID header (u32). Server messages with optional client ID are routed to clients.
@@ -137,7 +158,7 @@ pub struct Config {
     ///
     /// See --serverframe and --clientframe for specifying framing independently.
     ///
-    /// [default: json when set, possible values: gwsocket, json]
+    /// [default: json with --json, possible values: gwsocket, json]
     #[clap(
         long,
         value_parser,
@@ -194,8 +215,15 @@ pub struct Config {
     pub tcp: bool,
 
     /// Port range for TCP
-    #[clap(long, value_parser = parse_ports, value_name = "START:END", default_value = "9001:9999")]
-    pub tcpports: Range<u16>,
+    ///
+    /// [default: 9001:9999 with --tcp]
+    #[clap(long,
+        value_parser = parse_ports,
+        value_name = "START:END",
+        requires = "tcp",
+        default_value_if("tcp",  ArgPredicate::Equals("true".into()), Some("9001:9999"))
+    )]
+    pub tcpports: Option<Range<u16>>,
 
     /// Increase level of verbosity
     #[clap(short, action = ArgAction::Count)]

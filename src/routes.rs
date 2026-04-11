@@ -37,7 +37,7 @@ pub fn handle(
     };
 
     warp::serve(
-        socket(tx)
+        socket(tx, config.rooms)
             .or(health())
             .or(openmetrics(registry, config.metrics))
             .or(rooms_api(metrics.clone(), config.api))
@@ -49,8 +49,11 @@ pub fn handle(
     .1
 }
 
-pub fn socket(tx: EventTx) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
-    warpext::path::param_not::<RoomID>(RESERVED_ROOMS)
+pub fn socket(
+    tx: EventTx,
+    allowed_rooms: Option<Vec<String>>,
+) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
+    warpext::path::param_matches::<RoomID>(Some(RESERVED_ROOMS), allowed_rooms)
         .and(warp::path::end())
         .and(warp::ws())
         .and(warpext::env())
@@ -156,6 +159,16 @@ mod tests {
 
     use super::*;
 
+    fn ws_request(path: &'static str) -> warp::test::RequestBuilder {
+        request()
+            .method("GET")
+            .header("Connection", "Upgrade")
+            .header("Upgrade", "websocket")
+            .header("Sec-WebSocket-Key", "SGVsbG8sIHdvcmxkIQ==")
+            .header("Sec-WebSocket-Version", 13)
+            .path(path)
+    }
+
     #[tokio::test]
     async fn health_returns_ok() {
         let api = health();
@@ -167,26 +180,32 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn socket_rejects_invalid_room() {
+    async fn socket_rejects_reserved_room() {
         let (tx, _) = tokio::sync::mpsc::unbounded_channel::<Event>();
-        let api = socket(tx).recover(handle_rejection);
+        let api = socket(tx, None).recover(handle_rejection);
 
-        let ws = |path: &'static str| {
-            request()
-                .method("GET")
-                .header("Connection", "Upgrade")
-                .header("Upgrade", "websocket")
-                .header("Sec-WebSocket-Key", "SGVsbG8sIHdvcmxkIQ==")
-                .header("Sec-WebSocket-Version", 13)
-                .path(path)
-                .reply(&api)
-        };
+        let ws = |path| ws_request(path).reply(&api);
 
         assert_eq!(ws("/ok").await.status(), StatusCode::SWITCHING_PROTOCOLS);
         assert_eq!(ws("/api").await.status(), StatusCode::BAD_REQUEST);
         assert_eq!(ws("/api/rooms").await.status(), StatusCode::BAD_REQUEST);
         assert_eq!(ws("/metrics").await.status(), StatusCode::BAD_REQUEST);
         assert_eq!(ws("/health").await.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn socket_accepts_allowed_room() {
+        let (tx, _) = tokio::sync::mpsc::unbounded_channel::<Event>();
+        let allowlist = vec!["allowed".to_string()];
+        let api = socket(tx, Some(allowlist)).recover(handle_rejection);
+
+        let ws = |path| ws_request(path).reply(&api);
+
+        assert_eq!(
+            ws("/allowed").await.status(),
+            StatusCode::SWITCHING_PROTOCOLS
+        );
+        assert_eq!(ws("/other").await.status(), StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]
