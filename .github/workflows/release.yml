@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   release-github:
-    name: Build and Release ${{ matrix.target }} on ${{ matrix.os }}
+    name: Build and ${{ github.event_name == 'release' && 'Release' || 'Test' }} ${{ matrix.target }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -129,7 +129,7 @@ jobs:
           gh release upload ${{ steps.meta.outputs.tag }} ${{ env.ASSET }} ${{ env.ASSET_SUM }}
 
   release-docker:
-    name: Release Docker
+    name: ${{ github.event_name == 'release' && 'Release' || 'Test' }} Docker
     needs: release-github
     runs-on: ubuntu-latest
     steps:
