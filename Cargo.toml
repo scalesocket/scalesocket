@@ -33,5 +33,4 @@ urlencoding = "2.1"
 warp = "0.3.7"
 
 [dev-dependencies]
-mark-flaky-tests = {version= "1.0.2", features= ["tokio"] }
 trycmd = "0.15"
