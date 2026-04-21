@@ -1,4 +1,4 @@
-use tracing_subscriber::{filter::LevelFilter, fmt::layer, prelude::*, Registry};
+use tracing_subscriber::{Registry, filter::LevelFilter, fmt::layer, prelude::*};
 
 use crate::{cli::Config, types::Log};
 

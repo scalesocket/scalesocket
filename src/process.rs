@@ -8,7 +8,7 @@ use {
     tokio::net::TcpStream,
     tokio::process::Child,
     tokio::sync::Barrier,
-    tokio::time::{sleep, Duration},
+    tokio::time::{Duration, sleep},
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
     tokio_util::codec::{AnyDelimiterCodec, BytesCodec, FramedRead},
     tracing::instrument,
@@ -134,7 +134,7 @@ async fn spawn(channel: &mut Channel) -> AppResult<RunningProcess> {
                     return Err(AppError::NetworkError(
                         addr.to_string(),
                         e.kind().to_string(),
-                    ))
+                    ));
                 }
             };
 
@@ -195,12 +195,10 @@ impl RunningProcess {
 }
 
 #[cfg(test)]
-#[allow(unnameable_test_items)]
 mod tests {
 
     use clap::Parser;
     use futures::StreamExt;
-    use mark_flaky_tests::flaky;
     use tokio_stream::wrappers::BroadcastStream;
     use warp::ws::Message;
 
@@ -339,20 +337,25 @@ mod tests {
         assert_eq!(output, Some(Message::text("abc").to(2)));
     }
 
-    #[tokio::test]
-    #[flaky]
-    async fn test_handle_process_output_metadata_json() {
+    #[test]
+    fn test_handle_process_output_metadata_json() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+
         let (event_tx, mut event_rx) = tokio::sync::mpsc::unbounded_channel::<Event>();
         let channel = create_channel_with_event_tx(
             r#"scalesocket --serverframe=json echo -- {"_meta": true, "foo": "bar"}"#,
             event_tx,
         );
 
-        handle(channel, None).await.ok();
-        let event = event_rx.recv().await.unwrap();
+        let _ = rt.block_on(handle(channel, None));
+        let event = rt.block_on(event_rx.recv()).unwrap();
 
-        assert!(matches!(event, Event::ProcessMeta { .. }));
-        assert_eq!(format!("{:?}", event), "ProcessMeta { room: \"room1\", value: Object {\"_meta\": Bool(true), \"foo\": String(\"bar\")} }");
+        let Event::ProcessMeta { room, value } = event else {
+            panic!("expected ProcessMeta");
+        };
+        assert_eq!(room, "room1");
+        assert_eq!(value["_meta"], true);
+        assert_eq!(value["foo"], "bar");
     }
 
     #[tokio::test]

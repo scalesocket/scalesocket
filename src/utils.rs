@@ -43,7 +43,7 @@ pub mod warpext {
     use std::{collections::HashMap, convert::Infallible};
 
     use futures::future::ready;
-    use warp::{self, http::StatusCode, reject::Reject, Filter, Rejection, Reply};
+    use warp::{self, Filter, Rejection, Reply, http::StatusCode, reject::Reject};
 
     use crate::envvars::{CGIEnv, Env};
 
@@ -113,16 +113,14 @@ pub mod warpext {
             let allowlist = allowlist.map(HashSet::<String>::from_iter);
             warp::path::param::<T>()
                 .and_then(move |param: T| {
-                    if let Some(denylist) = denylist {
-                        if denylist.contains(&param.deref()) {
+                    if let Some(denylist) = denylist
+                        && denylist.contains(&param.deref()) {
                             return ready(Err(warp::reject::custom(InvalidRoom)))
                         }
-                    }
-                    if let Some(ref allowlist) = allowlist {
-                        if !allowlist.contains(param.deref()) {
+                    if let Some(ref allowlist) = allowlist
+                        && !allowlist.contains(param.deref()) {
                             return ready(Err(warp::reject::custom(InvalidRoom)))
                         }
-                    }
                     ready(Ok::<_, Rejection>((param,)))
                 })
                 // deal with Ok(())

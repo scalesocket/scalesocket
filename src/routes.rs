@@ -4,7 +4,7 @@ use {
     serde_json::json,
     std::path::PathBuf,
     warp::ws::Ws,
-    warp::{self, http::Response, Filter, Rejection, Reply},
+    warp::{self, Filter, Rejection, Reply, http::Response},
 };
 
 use crate::{
@@ -155,7 +155,7 @@ mod tests {
     use prometheus_client::metrics::family::Family;
     use serde_json::{self, Value};
     use warp::http::StatusCode;
-    use warp::test::{request, RequestBuilder};
+    use warp::test::{RequestBuilder, request};
 
     use super::*;
 
@@ -263,8 +263,11 @@ mod tests {
 
         assert!(resp.status().is_success());
         let body: Vec<Value> = serde_json::from_slice(resp.body()).unwrap();
-        assert!(body
-            .contains(&json!({"name": "foo", "connections": 1, "metadata": json!({"bar": 123})})));
+        assert!(
+            body.contains(
+                &json!({"name": "foo", "connections": 1, "metadata": json!({"bar": 123})})
+            )
+        );
         assert!(body.contains(&json!({"name": "bar", "connections": 1, "metadata": null})));
     }
 

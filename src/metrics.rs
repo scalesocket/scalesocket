@@ -2,7 +2,7 @@ use {
     prometheus_client::encoding::EncodeLabelSet,
     prometheus_client::metrics::{counter::Counter, family::Family, gauge::Gauge},
     prometheus_client::registry::Registry,
-    serde_json::{self, json, Value},
+    serde_json::{self, Value, json},
     std::collections::{HashMap, HashSet},
     std::sync::{Arc, RwLock},
 };
@@ -66,13 +66,11 @@ impl Metrics {
             .inc()
             == 0;
 
-        if add_label {
-            if let Some(rooms) = &self.ws_connections_labels {
-                rooms
-                    .write()
-                    .expect("poisoned lock")
-                    .insert(room.to_owned());
-            }
+        if add_label && let Some(rooms) = &self.ws_connections_labels {
+            rooms
+                .write()
+                .expect("poisoned lock")
+                .insert(room.to_owned());
         }
     }
 
@@ -85,13 +83,11 @@ impl Metrics {
             .dec()
             == 1;
 
-        if remove_label {
-            if let Some(rooms) = &self.ws_connections_labels {
-                rooms
-                    .write()
-                    .expect("poisoned lock")
-                    .insert(room.to_owned());
-            }
+        if remove_label && let Some(rooms) = &self.ws_connections_labels {
+            rooms
+                .write()
+                .expect("poisoned lock")
+                .insert(room.to_owned());
         }
     }
 

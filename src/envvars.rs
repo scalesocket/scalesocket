@@ -104,7 +104,7 @@ mod tests {
 
     use std::collections::HashMap;
 
-    use super::{replace_template_env, CGIEnv, Env};
+    use super::{CGIEnv, Env, replace_template_env};
 
     fn create_query() -> HashMap<String, String> {
         HashMap::from([("foo".to_string(), "bar baz".to_string())])

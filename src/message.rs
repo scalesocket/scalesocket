@@ -41,8 +41,7 @@ pub fn deserialize(msg: &Bytes, frame: Option<Frame>) -> Result<(Header, &[u8]),
 
                 assert_eq!(
                     effective_len, header_len,
-                    "Message length {} does not match {}: Chunked payloads are not supported",
-                    effective_len, header_len
+                    "Message length {effective_len} does not match {header_len}: Chunked payloads are not supported",
                 );
 
                 if msg_type.is_none() {
@@ -127,7 +126,7 @@ pub(crate) fn parse_binary_header(data: &[u8]) -> (Header, Option<Type>, u32, &[
 #[cfg(test)]
 mod tests {
 
-    use super::{parse_binary_header, Header, Type};
+    use super::{Header, Type, parse_binary_header};
 
     #[test]
     fn test_parse_id() {

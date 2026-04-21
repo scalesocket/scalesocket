@@ -2,11 +2,11 @@ use {
     futures::{FutureExt, TryFutureExt},
     id_pool::IdPool as PortPool,
     std::collections::{HashMap, HashSet},
-    std::sync::atomic::{AtomicU32, Ordering},
     std::sync::Arc,
     std::sync::Mutex,
+    std::sync::atomic::{AtomicU32, Ordering},
     tokio::sync::Barrier,
-    tracing::{instrument, Instrument},
+    tracing::{Instrument, instrument},
     warp::ws::{Message, WebSocket},
 };
 
@@ -14,7 +14,7 @@ use crate::{
     channel::Channel,
     cli::Config,
     connection,
-    envvars::{replace_template_env, Env},
+    envvars::{Env, replace_template_env},
     error::AppResult,
     metrics::Metrics,
     process,
@@ -271,13 +271,12 @@ fn disconnect(room: RoomID, env: Env, conn: ConnID, state: &mut State) {
         }
     }
 
-    if room_conns.is_empty() {
-        if let Some((_, _, kill_tx)) = state.procs.remove(&room) {
-            if kill_tx.send(()).is_ok() {
-                // Only log if kill was sent
-                tracing::info!("all clients disconnected, killing process");
-            }
-        }
+    if room_conns.is_empty()
+        && let Some((_, _, kill_tx)) = state.procs.remove(&room)
+        && kill_tx.send(()).is_ok()
+    {
+        // Only log if kill was sent
+        tracing::info!("all clients disconnected, killing process");
     }
 }
 
@@ -313,7 +312,7 @@ mod tests {
 
     use std::{
         collections::{HashMap, HashSet},
-        sync::{atomic::AtomicU32, Arc, Mutex},
+        sync::{Arc, Mutex, atomic::AtomicU32},
     };
 
     use clap::Parser;
@@ -322,9 +321,9 @@ mod tests {
         mpsc::{self},
         oneshot,
     };
-    use warp::{filters::ws::Message, Filter};
+    use warp::{Filter, filters::ws::Message};
 
-    use super::{attach, disconnect, Env, Event, State};
+    use super::{Env, Event, State, attach, disconnect};
     use crate::{
         cli::Config,
         types::{Cache, CacheBuffer, ProcessSenders, ToProcessRx},

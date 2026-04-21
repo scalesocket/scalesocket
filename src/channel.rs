@@ -11,7 +11,7 @@ use crate::{
     cli::Config,
     envvars::CGIEnv,
     error::{AppError, AppResult},
-    message::{deserialize, Address},
+    message::{Address, deserialize},
     types::{
         CacheBuffer, Caching, Event, EventTx, Framing, FromProcessTx, PortID, ProcessSenders,
         RoomID, ShutdownRx, ShutdownTx, ToProcessRx, ToProcessTx,
