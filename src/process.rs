@@ -8,7 +8,7 @@ use {
     tokio::net::TcpStream,
     tokio::process::Child,
     tokio::sync::Barrier,
-    tokio::time::{sleep, Duration},
+    tokio::time::{Duration, sleep},
     tokio_stream::wrappers::{LinesStream, UnboundedReceiverStream},
     tokio_util::codec::{AnyDelimiterCodec, BytesCodec, FramedRead},
     tracing::instrument,
@@ -134,7 +134,7 @@ async fn spawn(channel: &mut Channel) -> AppResult<RunningProcess> {
                     return Err(AppError::NetworkError(
                         addr.to_string(),
                         e.kind().to_string(),
-                    ))
+                    ));
                 }
             };
 
