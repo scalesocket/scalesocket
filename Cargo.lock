@@ -1477,7 +1477,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sharded-slab",
- "smallvec",
  "thread_local",
  "tracing-core",
  "tracing-log",
