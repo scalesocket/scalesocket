@@ -120,18 +120,18 @@ impl Channel {
             }
         };
 
-        match deserialize(&msg, self.framing.process_to_socket()) {
+        match deserialize(msg, self.framing.process_to_socket()) {
             Ok((h, _)) if h.is_meta && self.is_binary => {
                 tracing::warn!("binary metadata is not supported");
             }
             Ok((h, msg)) if h.is_meta => {
-                let value = serde_json::from_slice(msg).unwrap_or_default();
+                let value = serde_json::from_slice(&msg).unwrap_or_default();
                 write_metadata(self.event_tx.as_ref(), &self.room, value);
             }
             Ok((h, msg)) => {
                 let msg = match self.is_binary {
                     true => Message::binary(msg),
-                    false => Message::text(std::str::from_utf8(msg).unwrap_or_default()),
+                    false => Message::text(std::str::from_utf8(&msg).unwrap_or_default()),
                 };
 
                 if self.caching.matches(&h) {
