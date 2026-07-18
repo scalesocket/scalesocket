@@ -272,7 +272,7 @@ mod tests {
         handle(channel, None).await.ok();
         let output = proc_rx.recv().await.ok();
 
-        assert_eq!(output, Some(Message::binary([10]).broadcast()));
+        assert_eq!(output, Some(Message::binary(vec![10u8]).broadcast()));
     }
 
     #[tokio::test]

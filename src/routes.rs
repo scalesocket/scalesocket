@@ -25,7 +25,7 @@ const RESERVED_ROOMS: &[&str] = &[
     "favicon.ico",
 ];
 
-pub fn handle(
+pub async fn handle(
     tx: EventTx,
     config: Config,
     shutdown_rx: ShutdownRx,
@@ -45,8 +45,10 @@ pub fn handle(
             .or(files(config.static_dir))
             .recover(handle_rejection),
     )
-    .bind_with_graceful_shutdown(config.addr, shutdown_rx)
-    .1
+    .bind(config.addr)
+    .await
+    .graceful(shutdown_rx)
+    .run()
 }
 
 pub fn socket(

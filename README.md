@@ -12,7 +12,7 @@ Turn any code into a multiplayer websocket server.
 ## About
 
 ScaleSocket is a command-line tool for serving a binary or a script over websockets.
-If you are a programmer and need to build a collaborative server, ScaleSocket might be the tool for you.
+If you need to quickly cook up a collaborative websocket server, ScaleSocket might be the tool for you.
 
 To use it, you start your script using ScaleSocket and it maps the standard input and output streams to a websocket.
 

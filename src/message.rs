@@ -30,27 +30,32 @@ impl Address<Message> for Message {
     }
 }
 
+const HEADER_LENGTH: usize = 12; // bytes
+
 /// Deserialize message coming from process
-pub fn deserialize(msg: &Bytes, frame: Option<Frame>) -> Result<(Header, &[u8]), &'static str> {
+pub fn deserialize(msg: Bytes, frame: Option<Frame>) -> Result<(Header, Bytes), &'static str> {
     match frame {
         Some(f) => match f {
             Frame::GWSocket => {
-                let (header, msg_type, length, payload) = parse_binary_header(msg);
-                let effective_len = payload.len();
-                let header_len = length as usize;
+                let (header, msg_type, length, payload) = parse_binary_header(&msg);
+                let message_len = payload.len();
+                let claimed_len = length as usize;
 
                 assert_eq!(
-                    effective_len, header_len,
-                    "Message length {effective_len} does not match {header_len}: Chunked payloads are not supported",
+                    message_len, claimed_len,
+                    "Message length {message_len} does not match {claimed_len}: Chunked payloads are not supported",
                 );
 
                 if msg_type.is_none() {
                     return Err("Unknown message type");
                 }
 
-                Ok((header, payload))
+                Ok((header, msg.slice(HEADER_LENGTH..)))
             }
-            Frame::JSON => Ok(parse_json_header(msg)),
+            Frame::JSON => {
+                let (header, _) = parse_json_header(&msg);
+                Ok((header, msg))
+            }
         },
         None => Ok((Header::broadcast(), msg)),
     }
@@ -110,7 +115,7 @@ pub(crate) fn parse_binary_header(data: &[u8]) -> (Header, Option<Type>, u32, &[
     let msg_type: Option<Type> = FromPrimitive::from_u32(msg_type);
 
     let mut msg_len_data = [0; 4];
-    msg_len_data.copy_from_slice(&data[8..12]);
+    msg_len_data.copy_from_slice(&data[8..HEADER_LENGTH]);
     let msg_len = u32::from_le_bytes(msg_len_data);
 
     let header = match id {
@@ -120,7 +125,7 @@ pub(crate) fn parse_binary_header(data: &[u8]) -> (Header, Option<Type>, u32, &[
         id => Header::to(id),
     };
 
-    (header, msg_type, msg_len, &data[12..])
+    (header, msg_type, msg_len, &data[HEADER_LENGTH..])
 }
 
 #[cfg(test)]
